@@ -1,0 +1,336 @@
+<!doctype html><html lang="ms"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cara pasang Immich guna Docker Compose (VPS Ubuntu) · SiapPasang</title><style>body{font-family:system-ui,sans-serif;max-width:820px;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#222}
+pre{background:#0f172a;color:#e2e8f0;padding:1rem;overflow:auto;border-radius:8px}code{font-size:.92em}
+blockquote{border-left:4px solid #7c3aed;background:#f5f3ff;margin:1rem 0;padding:.5rem 1rem;border-radius:6px}
+table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.35rem .6rem}
+nav a{margin-right:1rem}</style></head><body>
+<nav><a href="/siap-pasang-guides/">🏠</a><a href="/siap-pasang-guides/ms/">BM</a><a href="/siap-pasang-guides/id/">ID</a><a href="/siap-pasang-guides/ms/pendedahan-afiliasi/">Disclosure</a></nav>
+<blockquote>
+<p>Langkah di bawah mengikuti dokumentasi rasmi Immich (dibaca 2 Nov 2026). Sahkan pada VPS anda sebelum guna untuk production.</p>
+</blockquote>
+<h1 id="cara-pasang-immich-guna-docker-compose">Cara pasang Immich guna Docker Compose</h1>
+<h2 id="1-apa-itu-immich">1. Apa itu Immich?</h2>
+<p>Immich ialah <strong>aplikasi foto dan video self-hosted</strong> — alternatif kepada Google Photos atau iCloud Photos yang berjalan di server anda sendiri. Aplikasi mudah alih (Android/iOS) boleh <strong>backup foto secara automatik</strong> ke server, dan antara muka web membolehkan anda lihat garis masa, album, peta, kongsi album serta cari foto mengikut wajah atau kandungan (machine learning berjalan di server anda).</p>
+<p>Sesuai untuk: keluarga atau individu yang mahu simpan foto sendiri tanpa bergantung pada storan awan berbayar, dan sesiapa yang mahu kawalan penuh ke atas data peribadi.</p>
+<ul>
+<li>Repo rasmi: <a href="https://github.com/immich-app/immich">https://github.com/immich-app/immich</a></li>
+<li>Dokumentasi rasmi: <a href="https://docs.immich.app/install/docker-compose">https://docs.immich.app/install/docker-compose</a></li>
+</ul>
+<blockquote>
+<p>💡 <strong>Jujur dulu:</strong> Immich lebih berat daripada kebanyakan alat self-hosted — minimum rasmi ialah <strong>6 GB RAM</strong>. Faktor paling besar pula ialah <strong>storan</strong>: pustaka foto anda akan membesar setiap tahun, dan thumbnail serta video yang ditranskod menambah lebih kurang 10–20% lagi. Immich <strong>bukan pengganti backup</strong> — anda tetap perlukan salinan di tempat lain (lihat Seksyen 8).</p>
+</blockquote>
+<h2 id="2-prasyarat">2. Prasyarat</h2>
+<ul>
+<li>VPS dengan <strong>Ubuntu 24.04 atau 22.04</strong> (64-bit) dan akses <code>sudo</code>. Docs rasmi mengesyorkan <strong>Linux</strong>; Windows/macOS tidak digalakkan untuk server.</li>
+<li>Minimum rasmi: <strong>RAM 6 GB, CPU 2 teras</strong> (disyorkan 8 GB dan 4 teras).</li>
+<li>CPU <code>amd64</code> atau <code>arm64</code>. Untuk <code>amd64</code>, bekas machine learning Immich v3 perlukan tahap <strong>x86-64-v2</strong> (kebanyakan CPU sejak ~2012).</li>
+<li><strong>Docker Engine</strong> dengan <strong>plugin Docker Compose</strong> — arahannya <code>docker compose</code>, <strong>bukan</strong> <code>docker-compose</code> (dipasang dalam Seksyen 4).</li>
+<li>Storan yang cukup untuk semua foto/video anda, dengan sistem fail Unix (contoh EXT4). Pangkalan data mesti di <strong>cakera tempatan</strong> (SSD lebih baik).</li>
+<li>Alat <code>wget</code> dan asas SSH: boleh log masuk <code>ssh user@IP_SERVER</code>.</li>
+<li>Port <strong>2283</strong> dibuka di firewall penyedia VPS — <strong>atau</strong> guna terowong SSH (lihat <a href="#akses-peribadi-guna-terowong-ssh">Akses peribadi guna terowong SSH</a>), yang lebih selamat.</li>
+</ul>
+<h2 id="3-saiz-vps-disyorkan">3. 📦 Saiz VPS disyorkan</h2>
+<!-- VpsBox tool="immich" lang="ms" -->
+<blockquote>
+<p><strong>📦 Saiz VPS disyorkan untuk Immich</strong></p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>RAM</th>
+<th>vCPU</th>
+<th>Disk</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lebih selesa (disyorkan rasmi)</td>
+<td>8 GB</td>
+<td>4</td>
+<td>100 GB+ (ikut saiz pustaka)</td>
+</tr>
+<tr>
+<td>Minimum (rasmi)</td>
+<td>6 GB</td>
+<td>2</td>
+<td>40 GB+</td>
+</tr>
+</tbody>
+</table>
+<p><em>RAM dan vCPU diambil daripada keperluan rasmi Immich (minimum 6 GB / 2 teras, disyorkan 8 GB / 4 teras). Saiz disk ialah cadangan kami: kira saiz semua foto dan video anda, tambah 10–20% untuk thumbnail dan transkod, serta beberapa GB untuk pangkalan data (biasanya 1–3 GB) dan sistem. Untuk pustaka besar, pertimbangkan block storage tambahan untuk <code>UPLOAD_LOCATION</code> — tetapi kekalkan pangkalan data pada cakera tempatan.</em></p>
+<p>Pilihan penyedia (pautan rasmi): <a href="https://www.vultr.com/pricing/">Vultr</a> · <a href="https://www.digitalocean.com/products/droplets">DigitalOcean</a> · <a href="https://www.hostinger.com/vps-hosting">Hostinger VPS</a></p>
+<p>Harga berubah — semak harga semasa di laman rasmi. <strong>Atau guna mana-mana VPS / PC sendiri.</strong></p>
+<p><small>ℹ️ Pendedahan: Pautan dalam kotak ini akan menjadi pautan afiliasi apabila pautan afiliasi diaktifkan; kami mungkin dapat komisen tanpa kos tambahan kepada anda. Buat masa ini semua pautan ialah pautan rasmi biasa. <a href="/siap-pasang-guides/ms/pendedahan-afiliasi/">Baca pendedahan penuh</a>.</small></p>
+</blockquote>
+<!-- /VpsBox -->
+
+<h2 id="4-pasang-docker">4. Pasang Docker</h2>
+<p>Log masuk ke VPS, kemudian kemas kini sistem:</p>
+<pre><code class="language-bash">sudo apt update &amp;&amp; sudo apt upgrade -y
+</code></pre>
+<p>Pasang Docker Engine + plugin Docker Compose guna skrip rasmi Docker:</p>
+<pre><code class="language-bash">curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+</code></pre>
+<blockquote>
+<p>Mahu cara manual (repo apt)? Ikut panduan rasmi: <a href="https://docs.docker.com/engine/install/ubuntu/">https://docs.docker.com/engine/install/ubuntu/</a></p>
+<p>⚠️ <strong>Jangan guna pakej <code>docker.io</code> atau <code>docker-compose</code> daripada repo Ubuntu.</strong> Docs rasmi Immich menyatakan pakej ini menyebabkan ralat seperti <code>unknown shorthand flag: 'd' in -d</code>. Guna Docker Engine rasmi seperti di atas.</p>
+</blockquote>
+<p><strong>Semak pemasangan:</strong></p>
+<pre><code class="language-bash">docker --version
+docker compose version
+sudo docker run hello-world
+</code></pre>
+<p>Jika anda nampak mesej <code>Hello from Docker!</code> dan <code>docker compose version</code> memaparkan nombor versi, Docker sudah sedia.</p>
+<p><strong>(Pilihan) Guna Docker tanpa <code>sudo</code>:</strong></p>
+<pre><code class="language-bash">sudo usermod -aG docker ${USER}
+exec sg docker newgrp
+groups   # pastikan &quot;docker&quot; ada dalam senarai
+</code></pre>
+<h2 id="5-pasang-immich">5. Pasang Immich</h2>
+<h3 id="51-cipta-folder-projek">5.1 Cipta folder projek</h3>
+<pre><code class="language-bash">mkdir ./immich-app
+cd ./immich-app
+</code></pre>
+<p>Semua fail Immich (<code>docker-compose.yml</code>, <code>.env</code>, dan secara lalai folder foto serta pangkalan data) akan berada dalam folder ini.</p>
+<h3 id="52-muat-turun-docker-composeyml-dan-env">5.2 Muat turun <code>docker-compose.yml</code> dan <code>.env</code></h3>
+<p>Arahan rasmi ini muat turun fail daripada <strong>keluaran terkini</strong> Immich di GitHub:</p>
+<pre><code class="language-bash">wget -O docker-compose.yml https://github.com/immich-app/immich/releases/latest/download/docker-compose.yml
+wget -O .env https://github.com/immich-app/immich/releases/latest/download/example.env
+</code></pre>
+<p>Ketika panduan ini ditulis (2 Nov 2026), keluaran terkini ialah <strong>v3.3.5</strong> (diterbitkan 21 Okt 2026).</p>
+<blockquote>
+<p>📝 Muat turun melalui pelayar? Pastikan anda <strong>namakan semula</strong> <code>example.env</code> kepada <code>.env</code>.</p>
+</blockquote>
+<h3 id="53-isi-fail-env">5.3 Isi fail <code>.env</code></h3>
+<p>Jana kata laluan pangkalan data yang rawak (huruf dan nombor sahaja):</p>
+<pre><code class="language-bash">openssl rand -hex 24
+</code></pre>
+<p>Salin output, kemudian buka <code>.env</code>:</p>
+<pre><code class="language-bash">nano .env
+</code></pre>
+<p>Ubah baris-baris ini:</p>
+<pre><code class="language-bash"># Lokasi foto/video yang dimuat naik — mesti ada ruang cakera yang cukup
+UPLOAD_LOCATION=./library
+
+# Lokasi fail pangkalan data — cakera tempatan sahaja (BUKAN network share)
+DB_DATA_LOCATION=./postgres
+
+# Buang tanda # dan tetapkan zon waktu anda
+TZ=Asia/Kuala_Lumpur
+
+# Versi Immich (v3 = sentiasa ikut keluaran v3 terkini)
+IMMICH_VERSION=v3
+
+# Tukar daripada &quot;postgres&quot; kepada output openssl tadi (A-Za-z0-9 sahaja)
+DB_PASSWORD=tampal-output-openssl-di-sini
+</code></pre>
+<p>Simpan (<code>Ctrl+O</code>, <code>Enter</code>, <code>Ctrl+X</code>), kemudian kunci kebenaran fail:</p>
+<pre><code class="language-bash">chmod 600 .env
+</code></pre>
+<blockquote>
+<p>📌 <strong><code>IMMICH_VERSION</code>:</strong> nilai lalai <code>v3</code> mengikut keluaran v3 terkini setiap kali anda tarik imej. Mahu kawalan penuh? Kunci pada versi tertentu, contoh <code>IMMICH_VERSION=v3.3.5</code> — tetapi anda perlu kemas kini nilai ini sendiri setiap kali naik taraf.</p>
+</blockquote>
+<h3 id="54-hidupkan-immich">5.4 Hidupkan Immich</h3>
+<pre><code class="language-bash">sudo docker compose up -d
+</code></pre>
+<p>Muat turun kali pertama ambil masa beberapa minit. Empat bekas akan dimulakan:</p>
+<ul>
+<li><strong><code>immich_server</code></strong> — aplikasi web dan API (port <strong>2283</strong>)</li>
+<li><strong><code>immich_machine_learning</code></strong> — carian pintar dan pengecaman wajah</li>
+<li><strong><code>immich_postgres</code></strong> — pangkalan data</li>
+<li><strong><code>immich_redis</code></strong> — baris gilir kerja (imej Valkey)</li>
+</ul>
+<p><strong>Apa yang perlu tahu (ringkas):</strong></p>
+<ul>
+<li>Foto anda berada dalam folder <code>UPLOAD_LOCATION</code> (lalai <code>./library</code>), pangkalan data dalam <code>DB_DATA_LOCATION</code> (lalai <code>./postgres</code>). <strong>Jangan padam</strong> kedua-dua folder ini.</li>
+<li>Untuk hentikan semua bekas: <code>sudo docker compose down</code> (data kekal).</li>
+</ul>
+<h2 id="6-nota-env-dan-keselamatan">6. Nota <code>.env</code> dan keselamatan</h2>
+<table>
+<thead>
+<tr>
+<th>Pemboleh ubah</th>
+<th>Fungsi</th>
+<th>Nilai selamat / contoh</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>UPLOAD_LOCATION</code></td>
+<td>Folder foto/video, thumbnail dan backup pangkalan data automatik</td>
+<td><code>./library</code> atau cakera besar, contoh <code>/mnt/foto</code></td>
+</tr>
+<tr>
+<td><code>DB_DATA_LOCATION</code></td>
+<td>Folder fail Postgres</td>
+<td><code>./postgres</code> — cakera tempatan (SSD), bukan NFS/SMB</td>
+</tr>
+<tr>
+<td><code>DB_PASSWORD</code></td>
+<td>Kata laluan Postgres</td>
+<td>Output <code>openssl rand -hex 24</code> (A-Za-z0-9 sahaja)</td>
+</tr>
+<tr>
+<td><code>TZ</code></td>
+<td>Zon waktu server</td>
+<td><code>Asia/Kuala_Lumpur</code></td>
+</tr>
+<tr>
+<td><code>IMMICH_VERSION</code></td>
+<td>Tag imej Immich</td>
+<td><code>v3</code> atau versi tetap, contoh <code>v3.3.5</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Peraturan keselamatan:</strong></p>
+<ul>
+<li><strong>Jangan commit</strong> <code>.env</code> ke GitHub. <code>chmod 600 .env</code> supaya hanya pemilik boleh baca.</li>
+<li>Postgres tidak didedahkan ke internet dalam <code>docker-compose.yml</code> rasmi — <strong>jangan tambah</strong> port pangkalan data atau Redis.</li>
+<li><code>http://IP_SERVER:2283</code> ialah HTTP biasa (tidak disulitkan). Membuka port 2283 ke internet tanpa HTTPS <strong>berisiko</strong> — kata laluan dan foto peribadi dihantar tanpa penyulitan. Guna terowong SSH untuk mula, dan sediakan HTTPS sebelum guna aplikasi mudah alih dari luar rumah (lihat Seksyen 10).</li>
+<li>Port yang diterbitkan oleh Docker biasanya <strong>memintas peraturan ufw</strong>. Jangan anggap ufw sahaja melindungi port 2283 — semak juga firewall di panel VPS.</li>
+</ul>
+<h2 id="7-sahkan-dan-cipta-akaun-admin">7. Sahkan dan cipta akaun admin</h2>
+<pre><code class="language-bash">sudo docker compose ps
+</code></pre>
+<p>✅ Keempat-empat bekas patut berstatus <strong><code>Up</code></strong> — <code>immich_server</code> akan bertukar kepada <strong><code>healthy</code></strong> selepas beberapa ketika.</p>
+<p>Lihat log jika ada bekas yang restart berulang:</p>
+<pre><code class="language-bash">sudo docker compose logs -f immich-server
+sudo docker compose logs -f immich-machine-learning
+</code></pre>
+<p>Buka pelayar ke:</p>
+<p><strong><code>http://IP_SERVER:2283</code></strong></p>
+<p>✅ <strong>Skrin dijangka:</strong> halaman alu-aluan Immich. Klik <strong>Getting Started</strong> dan ikut arahan untuk daftar. <strong>Pengguna pertama yang mendaftar menjadi admin.</strong></p>
+<blockquote>
+<p>⚠️ Daftar akaun admin <strong>segera</strong> selepas Immich hidup. Selagi belum ada admin, sesiapa yang boleh capai server anda boleh mendaftar dahulu dan menjadi admin. Terowong SSH (di bawah) mengelakkan risiko ini.</p>
+</blockquote>
+<h3 id="akses-peribadi-guna-terowong-ssh">Akses peribadi guna terowong SSH</h3>
+<p>Tidak mahu buka port 2283 ke internet? Dalam <code>docker-compose.yml</code>, di bawah servis <code>immich-server</code>, tukar baris port:</p>
+<pre><code class="language-yaml">    ports:
+      - '127.0.0.1:2283:2283'
+</code></pre>
+<p>Kemudian mulakan semula:</p>
+<pre><code class="language-bash">sudo docker compose down
+sudo docker compose up -d
+</code></pre>
+<p>Dari komputer anda (terminal baharu):</p>
+<pre><code class="language-bash">ssh -L 2283:localhost:2283 user@IP_SERVER
+</code></pre>
+<p>Buka <code>http://localhost:2283</code> di komputer anda. Hanya anda (melalui SSH) boleh capai Immich.</p>
+<blockquote>
+<p>📝 Cara ikat ke <code>127.0.0.1</code> ini ialah tip kami (format port standard Docker Compose), bukan langkah dalam docs rasmi Immich. Aplikasi mudah alih tidak boleh guna terowong ini dari luar — untuk itu, sediakan HTTPS (Seksyen 10). Ingat untuk ulang perubahan ini jika anda muat turun <code>docker-compose.yml</code> baharu.</p>
+</blockquote>
+<h2 id="8-selepas-pasang">8. Selepas pasang</h2>
+<p>Ringkasan langkah daripada <a href="https://docs.immich.app/install/post-install">Immich Docs — Post Installation</a>:</p>
+<ol>
+<li><strong>Pengguna lain (pilihan):</strong> <strong>Administration › Users › Create user</strong> untuk ahli keluarga.</li>
+<li><strong>Storage template (pilihan):</strong> <strong>Administration › Settings › Storage Template</strong> menentukan susunan folder fail di cakera (lalai: <code>Tahun/Tahun-Bulan-Hari/NamaFail</code>). Tetapkan awal sebelum muat naik banyak foto.</li>
+<li><strong>Aplikasi mudah alih:</strong> muat turun Immich di Google Play, App Store, F-Droid atau GitHub Releases. Log masuk dengan URL server, contoh <code>http://IP_SERVER:2283</code> (atau URL HTTPS anda).</li>
+<li><strong>Backup foto dari telefon:</strong> dalam aplikasi, tekan ikon awan, pilih album, kemudian <strong>Enable Backup</strong>.</li>
+</ol>
+<h3 id="backup-server-wajib">Backup server (wajib)</h3>
+<p>Docs rasmi menekankan strategi <strong>3-2-1</strong>: sekurang-kurangnya tiga salinan, pada dua jenis media, dengan satu salinan di luar lokasi.</p>
+<ul>
+<li>Immich <strong>membuat backup pangkalan data secara automatik</strong> ke <code>UPLOAD_LOCATION/backups</code> (lalai: setiap hari jam 2:00 pagi, simpan 14 salinan terakhir). Tetapan di <strong>Administration › Settings › Database Dump Settings</strong>.</li>
+<li>Backup pangkalan data <strong>tidak mengandungi foto/video</strong> — hanya metadata. Anda perlu backup <strong>keseluruhan folder <code>UPLOAD_LOCATION</code></strong> ke tempat lain (cakera lain, server lain atau storan awan) guna alat backup anda sendiri.</li>
+<li>Ikut panduan rasmi untuk butiran dan cara restore: <a href="https://docs.immich.app/administration/backup-and-restore/">Immich Docs — Backup and Restore</a>.</li>
+</ul>
+<h2 id="9-ralat-biasa">9. Ralat biasa</h2>
+<table>
+<thead>
+<tr>
+<th>Simptom</th>
+<th>Punca biasa</th>
+<th>Penyelesaian</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>unknown shorthand flag: 'd' in -d</code> atau <code>open: permission denied</code></td>
+<td>Pakej Docker distro (<code>docker.io</code>)</td>
+<td>Pasang Docker Engine rasmi (Seksyen 4), termasuk buang pakej lama</td>
+</tr>
+<tr>
+<td><code>'name' does not match any of the regexes: '^x-'</code></td>
+<td>Guna <code>docker-compose</code> (versi lama)</td>
+<td>Guna <code>docker compose</code> (dengan ruang) daripada Docker Engine rasmi</td>
+</tr>
+<tr>
+<td><code>can't set healthcheck.start_interval as feature require Docker Engine v25 or later</code></td>
+<td>Docker Engine lebih lama daripada v25</td>
+<td>Kemas kini Docker; atau, seperti docs rasmi, komen keluar baris <code>start_interval</code> dalam bahagian <code>database</code> di <code>docker-compose.yml</code></td>
+</tr>
+<tr>
+<td><code>bind: address already in use</code> (port 2283)</td>
+<td>Servis lain guna port 2283</td>
+<td>Tukar port hos, contoh <code>'2284:2283'</code>, kemudian buka <code>http://IP_SERVER:2284</code></td>
+</tr>
+<tr>
+<td>Bekas restart berulang / <code>Killed</code> / muat naik sangat perlahan</td>
+<td>RAM tak cukup (OOM)</td>
+<td>Pastikan sekurang-kurangnya 6 GB RAM; 8 GB disyorkan</td>
+</tr>
+<tr>
+<td><code>immich_machine_learning</code> gagal bermula pada server <code>amd64</code> lama</td>
+<td>CPU tiada sokongan x86-64-v2</td>
+<td>Pilih VPS/jenis CPU yang lebih baharu (lihat <a href="https://docs.immich.app/install/requirements">Requirements</a>)</td>
+</tr>
+<tr>
+<td>Ralat Postgres / pangkalan data rosak</td>
+<td><code>DB_DATA_LOCATION</code> pada network share atau sistem fail NTFS/FAT</td>
+<td>Letak <code>DB_DATA_LOCATION</code> pada cakera tempatan dengan sistem fail Unix (EXT4 dsb.)</td>
+</tr>
+<tr>
+<td>Tidak boleh buka <code>http://IP_SERVER:2283</code></td>
+<td>Port belum dibuka di firewall VPS, atau port diikat ke <code>127.0.0.1</code></td>
+<td>Buka port 2283 di panel VPS, atau guna terowong SSH</td>
+</tr>
+<tr>
+<td>Aplikasi mudah alih tidak dapat sambung</td>
+<td>URL salah (tiada <code>:2283</code> / <code>http</code> vs <code>https</code>)</td>
+<td>Masukkan URL penuh; jika di belakang reverse proxy, pastikan <code>/.well-known/immich</code> dihalakan ke Immich</td>
+</tr>
+<tr>
+<td><code>permission denied ... /var/run/docker.sock</code></td>
+<td>Pengguna bukan ahli kumpulan <code>docker</code></td>
+<td>Guna <code>sudo</code>, atau jalankan langkah <code>usermod</code> dalam Seksyen 4 dan log masuk semula</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Semak siapa guna port 2283:</strong></p>
+<pre><code class="language-bash">sudo ss -tulpn | grep -E ':2283 '
+</code></pre>
+<p>Lebih banyak jawapan: <a href="https://docs.immich.app/FAQ/">Immich Docs — FAQ</a>.</p>
+<h2 id="10-seterusnya-pilihan">10. Seterusnya (pilihan)</h2>
+<p><strong>HTTPS:</strong> jangan biarkan Immich terbuka di HTTP biasa, terutamanya jika aplikasi mudah alih akan backup dari luar rumah. Letak Immich di belakang reverse proxy (contoh Nginx, Caddy atau Traefik) dengan sijil TLS dan domain anda sendiri. Ikut keperluan rasmi: <a href="https://docs.immich.app/administration/reverse-proxy/">Immich Docs — Reverse Proxy</a>. Perkara penting daripada docs tersebut:</p>
+<ul>
+<li>Immich mesti dihidangkan pada <strong>akar (sub)domain</strong>, contoh <code>https://foto.contoh.com</code> — <strong>bukan</strong> sub-laluan seperti <code>/immich</code>.</li>
+<li>Proksi mesti hantar header <code>Host</code>, <code>X-Real-IP</code>, <code>X-Forwarded-Proto</code>, <code>X-Forwarded-For</code> dan benarkan <strong>muat naik fail besar</strong>.</li>
+</ul>
+<p><strong>Ubah tetapan:</strong> edit <code>.env</code>, kemudian:</p>
+<pre><code class="language-bash">sudo docker compose up -d
+</code></pre>
+<p><strong>Kemas kini Immich</strong> (ikut <a href="https://docs.immich.app/install/upgrading">Immich Docs — Upgrading</a>):</p>
+<ol>
+<li><strong>Baca nota keluaran</strong> di <a href="https://github.com/immich-app/immich/releases">https://github.com/immich-app/immich/releases</a> — terutamanya bahagian <em>breaking changes</em>.</li>
+<li><strong>Backup dahulu</strong> (Seksyen 8).</li>
+<li>Untuk naik taraf <strong>versi major</strong>, kemas kini <strong>aplikasi mudah alih dahulu</strong> — server hanya serasi dengan aplikasi versi major yang sepadan.</li>
+<li>Jika anda kunci versi, tukar <code>IMMICH_VERSION</code> dalam <code>.env</code> (contoh <code>v3.3.5</code> → versi sasaran).</li>
+<li>Tarik imej baharu dan hidupkan semula:</li>
+</ol>
+<pre><code class="language-bash">cd ~/immich-app
+sudo docker compose pull &amp;&amp; sudo docker compose up -d
+</code></pre>
+<ol>
+<li>(Pilihan) Kosongkan imej lama: <code>sudo docker image prune</code></li>
+</ol>
+<blockquote>
+<p>⚠️ <strong>Turun versi (downgrade) tidak disokong</strong> oleh Immich, walaupun dalam versi minor yang sama. Sebab itu backup sebelum kemas kini sangat penting. Jika nota keluaran meminta <code>docker-compose.yml</code> baharu, muat turun semula dan ulang perubahan anda — <strong>jangan tulis ganti</strong> <code>.env</code> anda.</p>
+</blockquote>
+<p><strong>Keselamatan asas:</strong> kemas kini Ubuntu secara berkala (<code>sudo apt upgrade</code>), guna kunci SSH (bukan kata laluan), dan semak storan kosong dengan <code>df -h</code> sebelum cakera penuh.</p>
+<h2 id="11-penafian">11. ⚠️ Penafian</h2>
+<p>Panduan tidak rasmi. Tiada kaitan dengan Immich, FUTO atau mana-mana penyedia VPS. Nama/logo milik pemilik masing-masing. Gunakan atas risiko sendiri dan sentiasa semak dokumentasi rasmi. <a href="/siap-pasang-guides/ms/penafian/">Penafian penuh</a>.</p>
+<h2 id="12-cap-versi">12. Cap versi</h2>
+<p><code>Rujukan: Immich v3.3.5 (keluaran terkini di GitHub) · Docker Engine + Compose plugin · Ubuntu 24.04 · Dikemas kini 2026-11-02 · Bahasa: ms</code></p>
+<p><em>Sumber: <a href="https://docs.immich.app/install/docker-compose">Immich Docs — Docker Compose</a>, <a href="https://docs.immich.app/install/requirements">Immich Docs — Requirements</a>, <a href="https://docs.immich.app/install/post-install">Immich Docs — Post Installation</a>, <a href="https://docs.immich.app/install/upgrading">Immich Docs — Upgrading</a>, <a href="https://docs.immich.app/administration/backup-and-restore/">Immich Docs — Backup and Restore</a>, <a href="https://docs.immich.app/administration/reverse-proxy/">Immich Docs — Reverse Proxy</a>, <a href="https://github.com/immich-app/immich">Immich GitHub</a>, <a href="https://docs.docker.com/engine/install/ubuntu/">Docker Docs — Ubuntu</a> (dibaca 2026-11-02).</em></p>
+<p>🌐 Baca dalam <a href="/siap-pasang-guides/id/immich/">Bahasa Indonesia</a></p></body></html>
