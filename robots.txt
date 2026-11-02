@@ -1,0 +1,4 @@
+# Phase A draft — not deployed. On publish, keep allow-all and set the real sitemap URL.
+User-agent: *
+Allow: /
+# Sitemap: https://kaneberry.github.io/pasang-guides/sitemap-index.xml
