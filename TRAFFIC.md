@@ -106,6 +106,8 @@ Goal: get BM/ID readers who search for “cara pasang … Docker / VPS” onto t
 ---
 
 ## Changelog
+- 2026-11-03 — Usage cut: new guide drafts → gigi (ChatGPT); Earnie/Kane review + publish only. See GIGI.md.
+
 
 - 2026-11-03 — Written by Earnie for Kane → Karven.
 - 2026-11-03 — **Karven OK: SEO polish this week; posts still held.** Staged: TRAFFIC.md, sitemap.xml, robots.txt Sitemap line, README guide list, BM↔ID twin + hub links, hreflang/canonical/meta description, FAQ blocks on all 5 guides (BM+ID). Community post + Shorts script queued locally only. No Search Console verify file (awaiting Kane/Karven OK).
