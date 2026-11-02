@@ -1,0 +1,265 @@
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cara install Uptime Kuma pakai Docker Compose (VPS Ubuntu) · SiapPasang</title><style>body{font-family:system-ui,sans-serif;max-width:820px;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#222}
+pre{background:#0f172a;color:#e2e8f0;padding:1rem;overflow:auto;border-radius:8px}code{font-size:.92em}
+blockquote{border-left:4px solid #7c3aed;background:#f5f3ff;margin:1rem 0;padding:.5rem 1rem;border-radius:6px}
+table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.35rem .6rem}
+nav a{margin-right:1rem}</style></head><body>
+<nav><a href="/siap-pasang-guides/">🏠</a><a href="/siap-pasang-guides/ms/">BM</a><a href="/siap-pasang-guides/id/">ID</a><a href="/siap-pasang-guides/id/pengungkapan-afiliasi/">Disclosure</a></nav>
+<blockquote>
+<p>Langkah di bawah mengikuti dokumentasi resmi Uptime Kuma (dibaca 2–3 Nov 2026). Verifikasi di VPS Anda sebelum dipakai untuk production.</p>
+</blockquote>
+<h1 id="cara-install-uptime-kuma-pakai-docker-compose">Cara install Uptime Kuma pakai Docker Compose</h1>
+<h2 id="1-apa-itu-uptime-kuma">1. Apa itu Uptime Kuma?</h2>
+<p>Uptime Kuma adalah <strong>tool monitoring uptime self-hosted</strong> — alternatif layanan seperti UptimeRobot yang berjalan di server Anda sendiri. Tool ini mengecek website, API, dan server Anda secara berkala, lalu <strong>mengirim notifikasi</strong> (misalnya Telegram, Discord, Slack, email) saat ada yang tidak bisa diakses.</p>
+<p>Beberapa fitur yang tercantum di README resmi:</p>
+<ul>
+<li>Monitor HTTP(s), TCP, keyword HTTP(s), JSON Query, WebSocket, Ping, record DNS, Push, container Docker, dan lainnya</li>
+<li>Notifikasi via Telegram, Discord, Gotify, Slack, Pushover, email (SMTP), dan <strong>90+ layanan lain</strong></li>
+<li>Interval pengecekan hingga <strong>20 detik</strong></li>
+<li>Beberapa <strong>status page</strong> sekaligus (bisa dipetakan ke domain sendiri), info sertifikat SSL, dukungan 2FA</li>
+</ul>
+<p>Cocok untuk: pemilik website, freelancer, dan tim kecil yang ingin tahu <strong>lebih dulu</strong> saat website atau layanannya down — tanpa langganan bulanan.</p>
+<ul>
+<li>Repo resmi: <a href="https://github.com/louislam/uptime-kuma">https://github.com/louislam/uptime-kuma</a></li>
+<li>Dokumentasi resmi: <a href="https://uptime.kuma.pet/docs/How-to-Install/">https://uptime.kuma.pet/docs/How-to-Install/</a></li>
+</ul>
+<blockquote>
+<p>💡 <strong>Tips penting:</strong> Agar monitoring bermakna, pasang Uptime Kuma di <strong>server yang berbeda</strong> dari website/layanan yang dipantau. Jika keduanya di VPS yang sama dan VPS itu down, Uptime Kuma ikut down — dan tidak ada yang mengirim notifikasi.</p>
+</blockquote>
+<h2 id="2-prasyarat">2. Prasyarat</h2>
+<ul>
+<li>VPS dengan <strong>Ubuntu 24.04 atau 22.04</strong> (64-bit) dan akses <code>sudo</code>.</li>
+<li><strong>Docker Engine</strong> dengan <strong>plugin Docker Compose</strong> — perintahnya <code>docker compose</code>, <strong>bukan</strong> <code>docker-compose</code> (di-install di Bagian 4).</li>
+<li><strong>Disk lokal</strong> untuk folder data. Dokumentasi resmi menyatakan filesystem jaringan seperti <strong>NFS tidak didukung</strong> (lihat Bagian 6).</li>
+<li>Tool <code>curl</code> dan dasar SSH: bisa login <code>ssh user@IP_SERVER</code>.</li>
+<li>Port <strong>3001</strong> dibuka di firewall penyedia VPS — <strong>atau</strong> pakai tunnel SSH (lihat <a href="#akses-pribadi-pakai-tunnel-ssh">Akses pribadi pakai tunnel SSH</a>), yang lebih aman.</li>
+</ul>
+<h2 id="3-ukuran-vps-disarankan">3. 📦 Ukuran VPS disarankan</h2>
+<!-- VpsBox tool="uptime-kuma" lang="id" -->
+<blockquote>
+<p><strong>📦 Ukuran VPS disarankan untuk Uptime Kuma</strong></p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>RAM</th>
+<th>vCPU</th>
+<th>Disk</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lebih nyaman</td>
+<td>2 GB</td>
+<td>1–2</td>
+<td>25 GB+</td>
+</tr>
+<tr>
+<td>Minimum</td>
+<td>1 GB</td>
+<td>1</td>
+<td>10 GB+</td>
+</tr>
+</tbody>
+</table>
+<p><em>Ukuran di atas adalah rekomendasi kami untuk setup kecil (puluhan monitor) — dokumentasi resmi tidak menetapkan kebutuhan RAM/CPU khusus. Uptime Kuma jauh lebih ringan dibanding Immich atau Dify. Tambah RAM jika Anda punya banyak monitor dengan interval pendek, atau jika VPS yang sama juga menjalankan aplikasi lain. Ukuran database bertambah sesuai jumlah monitor dan lama riwayat yang disimpan.</em></p>
+<p>Pilihan penyedia (tautan resmi): <a href="https://www.vultr.com/pricing/">Vultr</a> · <a href="https://www.digitalocean.com/products/droplets">DigitalOcean</a> · <a href="https://www.hostinger.com/vps-hosting">Hostinger VPS</a></p>
+<p>Harga bisa berubah — cek harga terbaru di situs resmi. <strong>Atau pakai VPS apa saja / PC sendiri.</strong></p>
+<p><small>ℹ️ Pengungkapan: Tautan di kotak ini akan menjadi tautan afiliasi apabila tautan afiliasi diaktifkan; kami mungkin mendapat komisi tanpa biaya tambahan bagi Anda. Saat ini semua tautan adalah tautan resmi biasa. <a href="/siap-pasang-guides/id/pengungkapan-afiliasi/">Baca pengungkapan lengkap</a>.</small></p>
+</blockquote>
+<!-- /VpsBox -->
+
+<h2 id="4-install-docker">4. Install Docker</h2>
+<p>Login ke VPS, lalu perbarui sistem:</p>
+<pre><code class="language-bash">sudo apt update &amp;&amp; sudo apt upgrade -y
+</code></pre>
+<p>Install Docker Engine + plugin Docker Compose memakai skrip resmi Docker:</p>
+<pre><code class="language-bash">curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+</code></pre>
+<blockquote>
+<p>Ingin cara manual (repo apt)? Ikuti panduan resmi: <a href="https://docs.docker.com/engine/install/ubuntu/">https://docs.docker.com/engine/install/ubuntu/</a></p>
+</blockquote>
+<p><strong>Cek instalasi:</strong></p>
+<pre><code class="language-bash">docker --version
+docker compose version
+sudo docker run hello-world
+</code></pre>
+<p>Jika muncul pesan <code>Hello from Docker!</code> dan <code>docker compose version</code> menampilkan nomor versi, Docker sudah siap.</p>
+<p><strong>(Opsional) Pakai Docker tanpa <code>sudo</code>:</strong></p>
+<pre><code class="language-bash">sudo usermod -aG docker ${USER}
+exec sg docker newgrp
+groups   # pastikan &quot;docker&quot; ada di daftar
+</code></pre>
+<h2 id="5-install-uptime-kuma">5. Install Uptime Kuma</h2>
+<h3 id="51-buat-folder-proyek-dan-unduh-composeyaml">5.1 Buat folder proyek dan unduh <code>compose.yaml</code></h3>
+<p>Perintah resmi dari README Uptime Kuma:</p>
+<pre><code class="language-bash">mkdir uptime-kuma
+cd uptime-kuma
+curl -o compose.yaml https://raw.githubusercontent.com/louislam/uptime-kuma/master/compose.yaml
+</code></pre>
+<p>Cek isi file:</p>
+<pre><code class="language-bash">cat compose.yaml
+</code></pre>
+<p>Isi resmi (saat panduan ini ditulis, 3 Nov 2026):</p>
+<pre><code class="language-yaml">services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:2
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/data
+    ports:
+      # &lt;Host Port&gt;:&lt;Container Port&gt;
+      - &quot;3001:3001&quot;
+</code></pre>
+<p><strong>Arti setiap baris (singkat):</strong></p>
+<ul>
+<li><strong><code>image: louislam/uptime-kuma:2</code></strong> — tag <code>:2</code> selalu mengikuti rilis <strong>versi major 2</strong> terbaru. Saat panduan ini ditulis, rilis terbaru adalah <strong>2.5.9</strong> (dirilis 31 Okt 2026).</li>
+<li><strong><code>./data:/app/data</code></strong> — semua data (database, pengaturan, monitor) disimpan di folder <code>data</code> di samping <code>compose.yaml</code>. <strong>Jangan hapus</strong> folder ini.</li>
+<li><strong><code>"3001:3001"</code></strong> — antarmuka web di port <strong>3001</strong>.</li>
+</ul>
+<h3 id="52-jalankan-uptime-kuma">5.2 Jalankan Uptime Kuma</h3>
+<pre><code class="language-bash">sudo docker compose up -d
+</code></pre>
+<p>Setelah image selesai diunduh, Uptime Kuma berjalan di semua antarmuka jaringan — misalnya <code>http://IP_SERVER:3001</code>.</p>
+<p>Untuk menghentikan: <code>sudo docker compose down</code> (data di <code>./data</code> tetap aman).</p>
+<h2 id="6-catatan-penyimpanan-dan-keamanan">6. Catatan penyimpanan dan keamanan</h2>
+<blockquote>
+<p>⚠️ <strong>NFS / filesystem jaringan tidak didukung.</strong> Dokumentasi resmi menyatakan filesystem harus mendukung <strong>POSIX file lock</strong> agar database SQLite tidak rusak. Petakan <code>/app/data</code> ke <strong>folder lokal</strong> atau <strong>Docker volume</strong> — bukan NFS, SMB, atau penyimpanan jaringan lainnya.</p>
+</blockquote>
+<p><strong>Aturan keamanan:</strong></p>
+<ul>
+<li><code>http://IP_SERVER:3001</code> adalah HTTP biasa (tidak terenkripsi). Membuka port 3001 ke internet tanpa HTTPS <strong>berisiko</strong> — password admin dan data monitor dikirim tanpa enkripsi. Pakai tunnel SSH untuk mulai, dan siapkan reverse proxy + HTTPS sebelum diakses dari internet (lihat Bagian 10).</li>
+<li>Port yang dipublikasikan Docker biasanya <strong>melewati aturan ufw</strong>. Jangan menganggap ufw saja sudah melindungi port 3001 — cek juga firewall di panel VPS.</li>
+<li>Aktifkan <strong>2FA</strong> untuk akun admin setelah login (<strong>Settings › Security</strong>).</li>
+</ul>
+<h2 id="7-verifikasi-dan-buat-akun-admin">7. Verifikasi dan buat akun admin</h2>
+<pre><code class="language-bash">sudo docker compose ps
+</code></pre>
+<p>✅ Container <code>uptime-kuma</code> seharusnya berstatus <strong><code>Up</code></strong>. Image resmi punya healthcheck bawaan, jadi statusnya bisa berubah menjadi <strong><code>healthy</code></strong> setelah beberapa menit.</p>
+<p>Lihat log jika container terus restart:</p>
+<pre><code class="language-bash">sudo docker compose logs -f uptime-kuma
+</code></pre>
+<p>Buka browser ke:</p>
+<p><strong><code>http://IP_SERVER:3001</code></strong></p>
+<p>✅ <strong>Layar yang diharapkan (pertama kali):</strong></p>
+<ol>
+<li><strong>Pilih database</strong> — Uptime Kuma 2 bertanya <em>"Which database would you like to use?"</em>. Untuk setup kecil, pilih <strong>SQLite</strong> (antarmukanya menyebut <em>recommended for small-scale deployments</em>). Pilihan lain: <strong>Embedded MariaDB</strong> (sudah ada di image Docker) atau <strong>MariaDB/MySQL</strong> eksternal.</li>
+<li><strong>Buat akun admin</strong> — isi username dan password yang kuat.</li>
+</ol>
+<blockquote>
+<p>⚠️ Buat akun admin <strong>segera</strong> setelah Uptime Kuma berjalan. Selama belum ada admin, siapa pun yang bisa mengakses port 3001 bisa menyiapkannya lebih dulu. Tunnel SSH (di bawah) menghindari risiko ini.</p>
+</blockquote>
+<h3 id="akses-pribadi-pakai-tunnel-ssh">Akses pribadi pakai tunnel SSH</h3>
+<p>README resmi menunjukkan cara membatasi akses hanya ke localhost dengan <code>-p 127.0.0.1:3001:3001</code> (contoh <code>docker run</code>). Untuk Docker Compose, ubah baris port di <code>compose.yaml</code> dengan cara yang sama <em>(tips kami, diadaptasi dari contoh resmi)</em>:</p>
+<pre><code class="language-yaml">    ports:
+      - &quot;127.0.0.1:3001:3001&quot;
+</code></pre>
+<p>Lalu jalankan ulang:</p>
+<pre><code class="language-bash">sudo docker compose down
+sudo docker compose up -d
+</code></pre>
+<p>Dari komputer Anda (terminal baru):</p>
+<pre><code class="language-bash">ssh -L 3001:localhost:3001 user@IP_SERVER
+</code></pre>
+<p>Buka <code>http://localhost:3001</code> di komputer Anda. Hanya Anda (melalui SSH) yang bisa mengakses Uptime Kuma. Pengaturan ini juga cocok jika Anda memasang reverse proxy di VPS yang sama.</p>
+<h2 id="8-setelah-install">8. Setelah install</h2>
+<ol>
+<li><strong>Tambah monitor pertama:</strong> klik <strong>Add New Monitor</strong>, pilih jenis (misalnya <strong>HTTP(s)</strong>), isi nama dan URL website Anda, lalu <strong>Save</strong>.</li>
+<li><strong>Siapkan notifikasi:</strong> <strong>Settings › Notifications › Setup Notification</strong>, pilih layanan (misalnya Telegram atau email SMTP) dan klik <strong>Test</strong> untuk memastikan pesan terkirim. Lalu aktifkan notifikasi tersebut di monitor Anda.</li>
+<li><strong>(Opsional) Status page:</strong> <strong>Status Pages › New Status Page</strong> untuk halaman status publik yang bisa dibagikan ke pelanggan.</li>
+<li><strong>Keamanan akun:</strong> aktifkan 2FA di <strong>Settings › Security</strong>.</li>
+</ol>
+<blockquote>
+<p>📝 Nama menu bisa sedikit berbeda antarversi. Jika tidak ketemu, lihat <a href="https://github.com/louislam/uptime-kuma/wiki">wiki resmi</a>.</p>
+</blockquote>
+<h3 id="backup-penting">Backup (penting)</h3>
+<p>Menurut wiki resmi (panduan migrasi v1 → v2), <strong>backup folder <code>data</code></strong> saat ini satu-satunya metode backup yang didukung — fitur backup/restore JSON lama sudah dihapus.</p>
+<p>Contoh sederhana (hentikan dulu agar database tidak sedang ditulis):</p>
+<pre><code class="language-bash">cd ~/uptime-kuma
+sudo docker compose down
+sudo tar czf ~/uptime-kuma-data-$(date +%F).tar.gz data
+sudo docker compose up -d
+</code></pre>
+<p>Simpan file <code>.tar.gz</code> tersebut di tempat lain (komputer Anda, server lain, atau cloud storage). Jika Anda memilih MariaDB eksternal, backup juga database tersebut secara terpisah.</p>
+<h2 id="9-error-umum">9. Error umum</h2>
+<table>
+<thead>
+<tr>
+<th>Gejala</th>
+<th>Penyebab umum</th>
+<th>Solusi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tidak bisa membuka <code>http://IP_SERVER:3001</code></td>
+<td>Port belum dibuka di firewall VPS, atau port diikat ke <code>127.0.0.1</code></td>
+<td>Buka port 3001 di panel VPS, atau pakai tunnel SSH</td>
+</tr>
+<tr>
+<td><code>bind: address already in use</code> (port 3001)</td>
+<td>Layanan lain memakai port 3001</td>
+<td>Ganti port host, misalnya <code>"3002:3001"</code>, lalu buka <code>http://IP_SERVER:3002</code></td>
+</tr>
+<tr>
+<td>Error <code>database is locked</code> / database rusak</td>
+<td>Folder <code>data</code> di NFS atau penyimpanan jaringan</td>
+<td>Pindahkan <code>data</code> ke disk lokal atau Docker volume (Bagian 6)</td>
+</tr>
+<tr>
+<td>Dashboard macet / tidak update di belakang reverse proxy</td>
+<td>Header WebSocket <code>Upgrade</code> dan <code>Connection</code> tidak diteruskan</td>
+<td>Ikuti <a href="https://uptime.kuma.pet/docs/Reverse-Proxy/">Reverse Proxy</a> resmi (Bagian 10)</td>
+</tr>
+<tr>
+<td>Monitor <code>localhost</code> selalu DOWN</td>
+<td>Di dalam container Docker, <code>localhost</code> merujuk ke container itu sendiri</td>
+<td>Lihat <a href="https://github.com/louislam/uptime-kuma/wiki/Troubleshooting">Troubleshooting</a> resmi untuk jaringan Docker</td>
+</tr>
+<tr>
+<td>Lupa password admin</td>
+<td>—</td>
+<td>Ikuti <a href="https://github.com/louislam/uptime-kuma/wiki/Reset-Password-via-CLI">Reset Password via CLI</a>: <code>sudo docker compose exec uptime-kuma npm run reset-password</code></td>
+</tr>
+<tr>
+<td><code>permission denied ... /var/run/docker.sock</code></td>
+<td>Pengguna bukan anggota grup <code>docker</code></td>
+<td>Pakai <code>sudo</code>, atau jalankan langkah <code>usermod</code> di Bagian 4 lalu login ulang</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Cek siapa yang memakai port 3001:</strong></p>
+<pre><code class="language-bash">sudo ss -tulpn | grep -E ':3001 '
+</code></pre>
+<blockquote>
+<p>📝 Perintah reset password resmi adalah <code>docker exec -it &lt;nama container&gt; bash</code> lalu <code>npm run reset-password</code>. Perintah <code>docker compose exec</code> di atas adalah bentuk setaranya untuk Docker Compose.</p>
+</blockquote>
+<h2 id="10-selanjutnya-opsional">10. Selanjutnya (opsional)</h2>
+<p><strong>HTTPS:</strong> jangan biarkan Uptime Kuma terbuka di HTTP biasa. Pasang di belakang reverse proxy (misalnya Nginx, Apache, atau Caddy) dengan sertifikat TLS dan domain Anda sendiri. Ikuti contoh konfigurasi resmi: <a href="https://uptime.kuma.pet/docs/Reverse-Proxy/">Uptime Kuma Docs — Reverse Proxy</a>. Poin penting dari dokumentasi tersebut:</p>
+<ul>
+<li>Uptime Kuma berbasis <strong>WebSocket</strong> — proxy harus meneruskan header <strong><code>Upgrade</code></strong> dan <strong><code>Connection</code></strong>.</li>
+<li><strong>Subdirektori tidak didukung</strong> (misalnya <code>contoh.com/uptimekuma</code>). Pakai domain atau subdomain sendiri, misalnya <code>https://status.contoh.com</code>.</li>
+<li>Jika Uptime Kuma <strong>hanya</strong> bisa diakses lewat proxy, Anda bisa mengatur <strong>Settings › Reverse Proxy › Trust Proxy</strong> ke <strong>Yes</strong> agar IP klien yang sebenarnya tampil di log.</li>
+</ul>
+<p><strong>Update Uptime Kuma</strong> (ikuti <a href="https://uptime.kuma.pet/docs/How-to-Update/">How to Update</a> resmi):</p>
+<ol>
+<li><strong>Backup dulu</strong> (Bagian 8).</li>
+<li>Baca catatan rilis di <a href="https://github.com/louislam/uptime-kuma/releases">https://github.com/louislam/uptime-kuma/releases</a>.</li>
+<li>Tarik image baru dan buat ulang container:</li>
+</ol>
+<pre><code class="language-bash">cd ~/uptime-kuma
+sudo docker compose pull
+sudo docker compose up -d --force-recreate
+</code></pre>
+<blockquote>
+<p>📝 Dokumentasi resmi menyebutkan image Docker untuk setiap rilis baru butuh waktu untuk dibuild — jika belum tersedia, coba lagi nanti.</p>
+<p>⚠️ <strong>Upgrade dari Uptime Kuma 1.x?</strong> Versi 2 adalah update major dengan <em>breaking changes</em>, dan migrasi database bisa memakan waktu lama (hingga berjam-jam untuk data besar). <strong>Backup folder <code>data</code></strong>, baca <a href="https://github.com/louislam/uptime-kuma/wiki/Migration-From-v1-To-v2">Migration From v1 To v2</a> lebih dulu, dan <strong>jangan hentikan</strong> proses migrasi.</p>
+</blockquote>
+<p><strong>Keamanan dasar:</strong> perbarui Ubuntu secara berkala (<code>sudo apt upgrade</code>), pakai kunci SSH (bukan password), dan pantau sisa ruang disk dengan <code>df -h</code>.</p>
+<h2 id="11-penafian">11. ⚠️ Penafian</h2>
+<p>Panduan tidak resmi. Tidak berafiliasi dengan Uptime Kuma, pengembangnya, atau penyedia VPS mana pun. Nama/logo milik pemiliknya masing-masing. Gunakan dengan risiko Anda sendiri dan selalu cek dokumentasi resmi. <a href="/siap-pasang-guides/id/penafian/">Penafian lengkap</a>.</p>
+<h2 id="12-cap-versi">12. Cap versi</h2>
+<p><code>Rujukan: Uptime Kuma 2.5.9 (rilis terbaru di GitHub; image louislam/uptime-kuma:2) · Docker Engine + Compose plugin · Ubuntu 24.04 · Diperbarui 2026-11-03 · Bahasa: id</code></p>
+<p><em>Sumber: <a href="https://github.com/louislam/uptime-kuma">Uptime Kuma README</a>, <a href="https://github.com/louislam/uptime-kuma/blob/master/compose.yaml">compose.yaml resmi</a>, <a href="https://uptime.kuma.pet/docs/How-to-Install/">Uptime Kuma Docs — How to Install</a>, <a href="https://uptime.kuma.pet/docs/How-to-Update/">Uptime Kuma Docs — How to Update</a>, <a href="https://uptime.kuma.pet/docs/Reverse-Proxy/">Uptime Kuma Docs — Reverse Proxy</a>, <a href="https://github.com/louislam/uptime-kuma/wiki/Migration-From-v1-To-v2">Wiki — Migration From v1 To v2</a>, <a href="https://github.com/louislam/uptime-kuma/wiki/Reset-Password-via-CLI">Wiki — Reset Password via CLI</a>, <a href="https://github.com/louislam/uptime-kuma/releases/tag/2.5.9">Rilis 2.5.9</a>, <a href="https://docs.docker.com/engine/install/ubuntu/">Docker Docs — Ubuntu</a> (dibaca 2026-11-02 sampai 2026-11-03).</em></p>
+<p>🌐 Baca dalam <a href="/siap-pasang-guides/ms/uptime-kuma/">Bahasa Melayu</a></p></body></html>
