@@ -1,0 +1,315 @@
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cara install Dify pakai Docker Compose (VPS Ubuntu) · SiapPasang</title><style>body{font-family:system-ui,sans-serif;max-width:820px;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#222}
+pre{background:#0f172a;color:#e2e8f0;padding:1rem;overflow:auto;border-radius:8px}code{font-size:.92em}
+blockquote{border-left:4px solid #7c3aed;background:#f5f3ff;margin:1rem 0;padding:.5rem 1rem;border-radius:6px}
+table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.35rem .6rem}
+nav a{margin-right:1rem}</style></head><body>
+<nav><a href="/siap-pasang-guides/">🏠</a><a href="/siap-pasang-guides/ms/">BM</a><a href="/siap-pasang-guides/id/">ID</a><a href="/siap-pasang-guides/id/pengungkapan-afiliasi/">Disclosure</a></nav>
+<blockquote>
+<p>Langkah di bawah mengikuti dokumentasi resmi Dify (dibaca 2 Nov 2026). Verifikasi di VPS Anda sebelum dipakai untuk production.</p>
+</blockquote>
+<h1 id="cara-install-dify-pakai-docker-compose">Cara install Dify pakai Docker Compose</h1>
+<h2 id="1-apa-itu-dify">1. Apa itu Dify?</h2>
+<p>Dify adalah <strong>platform untuk membangun aplikasi AI</strong> — chatbot, workflow/chatflow, agen AI, dan basis pengetahuan (RAG) — lewat antarmuka visual. Anda menghubungkan model dari penyedia seperti OpenAI, Anthropic, Gemini, atau Ollama, lalu menerbitkan aplikasinya sebagai web app atau API.</p>
+<p>Cocok untuk: tim kecil dan UMKM yang ingin membuat chatbot internal atau otomatisasi AI berbasis dokumen sendiri, serta developer yang ingin membuat prototipe aplikasi AI dengan cepat.</p>
+<ul>
+<li>Repo resmi: <a href="https://github.com/langgenius/dify">https://github.com/langgenius/dify</a></li>
+<li>Dokumentasi resmi: <a href="https://docs.dify.ai/en/self-host/deploy/quick-start/docker-compose">https://docs.dify.ai/en/self-host/deploy/quick-start/docker-compose</a></li>
+</ul>
+<blockquote>
+<p>💡 <strong>Jujur dulu:</strong> Dify jauh <strong>lebih berat</strong> dibanding n8n atau Open WebUI. Satu instalasi menjalankan lebih dari 15 container (API, worker, database, Redis, database vektor, sandbox, dan lainnya). Dify juga <strong>tidak punya model sendiri</strong> — Anda butuh API key penyedia model atau Ollama. Kalau tidak ingin repot mengurus server, <strong>Dify Cloud</strong> adalah pilihan yang lebih mudah: <a href="https://dify.ai/pricing">https://dify.ai/pricing</a></p>
+</blockquote>
+<h2 id="2-prasyarat">2. Prasyarat</h2>
+<ul>
+<li>VPS dengan <strong>Ubuntu 24.04 atau 22.04</strong> (64-bit) dan akses <code>sudo</code>.</li>
+<li>Minimum resmi: <strong>CPU ≥ 2 core, RAM ≥ 4 GiB</strong>.</li>
+<li><strong>Docker 19.03+</strong> dan <strong>Docker Compose 2.24.0+</strong> (di-install di Bagian 4).</li>
+<li>Tool <code>git</code>, <code>curl</code>, dan <code>jq</code> (di-install di Bagian 5.1).</li>
+<li>Dasar SSH: bisa login <code>ssh user@IP_SERVER</code>.</li>
+<li>API key penyedia model (misalnya OpenAI) <strong>atau</strong> Ollama yang bisa dijangkau dari server.</li>
+<li>Port <strong>80</strong> dibuka di firewall penyedia VPS — <strong>atau</strong> pakai tunnel SSH (lihat <a href="#akses-pribadi-pakai-tunnel-ssh">Akses pribadi pakai tunnel SSH</a>), yang lebih aman.</li>
+</ul>
+<h2 id="3-ukuran-vps-disarankan">3. 📦 Ukuran VPS disarankan</h2>
+<!-- VpsBox tool="dify" lang="id" -->
+<blockquote>
+<p><strong>📦 Ukuran VPS disarankan untuk Dify</strong></p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>RAM</th>
+<th>vCPU</th>
+<th>Disk</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Minimum (resmi)</td>
+<td>4 GB</td>
+<td>2</td>
+<td>40 GB</td>
+</tr>
+<tr>
+<td>Lebih nyaman</td>
+<td>8 GB</td>
+<td>4</td>
+<td>60 GB+</td>
+</tr>
+</tbody>
+</table>
+<p><em>RAM 4 GiB dan CPU 2 core adalah syarat minimum di dokumentasi resmi Dify. Ukuran disk dan baris "lebih nyaman" adalah rekomendasi kami — Dify menjalankan banyak container sekaligus, dan basis pengetahuan (dokumen + vektor) akan terus membesar. Model lokal (Ollama) di server yang sama butuh RAM jauh lebih besar.</em></p>
+<p>Pilihan penyedia (tautan resmi): <a href="https://www.vultr.com/pricing/">Vultr</a> · <a href="https://www.digitalocean.com/products/droplets">DigitalOcean</a> · <a href="https://www.hostinger.com/vps-hosting">Hostinger VPS</a></p>
+<p>Harga bisa berubah — cek harga terbaru di situs resmi. <strong>Atau pakai VPS apa saja / PC sendiri.</strong></p>
+<p><small>ℹ️ Pengungkapan: Tautan di kotak ini akan menjadi tautan afiliasi apabila tautan afiliasi diaktifkan; kami mungkin mendapat komisi tanpa biaya tambahan bagi Anda. Saat ini semua tautan adalah tautan resmi biasa. <a href="/siap-pasang-guides/id/pengungkapan-afiliasi/">Baca pengungkapan lengkap</a>.</small></p>
+</blockquote>
+<!-- /VpsBox -->
+
+<h2 id="4-install-docker">4. Install Docker</h2>
+<p>Login ke VPS, lalu perbarui sistem:</p>
+<pre><code class="language-bash">sudo apt update &amp;&amp; sudo apt upgrade -y
+</code></pre>
+<p>Install Docker Engine + plugin Docker Compose memakai skrip resmi Docker:</p>
+<pre><code class="language-bash">curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+</code></pre>
+<blockquote>
+<p>Ingin cara manual (repo apt)? Ikuti panduan resmi: <a href="https://docs.docker.com/engine/install/ubuntu/">https://docs.docker.com/engine/install/ubuntu/</a></p>
+</blockquote>
+<p><strong>Cek instalasi:</strong></p>
+<pre><code class="language-bash">docker --version
+docker compose version
+sudo docker run hello-world
+</code></pre>
+<p>Pastikan <code>docker compose version</code> menunjukkan <strong>2.24.0 atau lebih baru</strong> — Dify tidak akan jalan dengan versi lebih lama. Jika muncul pesan <code>Hello from Docker!</code>, Docker sudah siap.</p>
+<p><strong>(Opsional) Pakai Docker tanpa <code>sudo</code>:</strong></p>
+<pre><code class="language-bash">sudo usermod -aG docker ${USER}
+exec sg docker newgrp
+groups   # pastikan &quot;docker&quot; ada di daftar
+</code></pre>
+<h2 id="5-install-dify">5. Install Dify</h2>
+<h3 id="51-install-git-curl-dan-jq">5.1 Install <code>git</code>, <code>curl</code>, dan <code>jq</code></h3>
+<pre><code class="language-bash">sudo apt install -y git curl jq
+</code></pre>
+<h3 id="52-unduh-clone-dify-versi-terbaru">5.2 Unduh (clone) Dify versi terbaru</h3>
+<p>Perintah resmi ini mencari tag rilis terbaru lewat API GitHub, lalu meng-clone versi tersebut:</p>
+<pre><code class="language-bash">git clone --branch &quot;$(curl -s https://api.github.com/repos/langgenius/dify/releases/latest | jq -r .tag_name)&quot; https://github.com/langgenius/dify.git
+</code></pre>
+<p>Ingin tahu dulu versi apa yang akan di-install?</p>
+<pre><code class="language-bash">curl -s https://api.github.com/repos/langgenius/dify/releases/latest | jq -r .tag_name
+</code></pre>
+<p>Saat panduan ini ditulis (2 Nov 2026), hasilnya adalah <code>1.18.0</code>.</p>
+<blockquote>
+<p>📝 <strong>Error <code>fatal: Remote branch null not found</code>?</strong> Biasanya karena API GitHub membatasi permintaan tanpa login, sehingga <code>jq</code> mengembalikan <code>null</code>. Clone dengan tag yang ditulis langsung — cek nomor versi terbaru di <a href="https://github.com/langgenius/dify/releases">https://github.com/langgenius/dify/releases</a>:</p>
+<p><code>bash
+git clone --branch 1.18.0 https://github.com/langgenius/dify.git</code></p>
+</blockquote>
+<h3 id="53-siapkan-file-env">5.3 Siapkan file <code>.env</code></h3>
+<pre><code class="language-bash">cd dify/docker
+cp .env.example .env
+</code></pre>
+<p>Semua pengaturan awal yang penting ada di <code>docker/.env</code>.</p>
+<h3 id="54-buat-token-sandbox-agen-wajib">5.4 Buat token sandbox agen (wajib)</h3>
+<pre><code class="language-bash">openssl rand -base64 32
+</code></pre>
+<p>Salin hasilnya, lalu buka <code>.env</code>:</p>
+<pre><code class="language-bash">nano .env
+</code></pre>
+<p>Cari baris <code>DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN=</code> (pakai <code>Ctrl+W</code> untuk mencari) dan tempel hasil tadi:</p>
+<pre><code class="language-bash">DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN=tempel-hasil-openssl-di-sini
+</code></pre>
+<p>Simpan (<code>Ctrl+O</code>, <code>Enter</code>, <code>Ctrl+X</code>), lalu kunci izin file:</p>
+<pre><code class="language-bash">chmod 600 .env
+</code></pre>
+<blockquote>
+<p>⚠️ Menurut dokumentasi resmi, layanan <code>agent_backend</code> dan sandbox-nya <strong>tidak akan berjalan</strong> tanpa token ini.</p>
+</blockquote>
+<h3 id="55-jalankan-dify">5.5 Jalankan Dify</h3>
+<pre><code class="language-bash">sudo docker compose up -d
+</code></pre>
+<p>Unduhan pertama butuh beberapa menit (banyak image). Container yang dijalankan:</p>
+<ul>
+<li><strong>7 layanan inti:</strong> <code>api</code>, <code>api_websocket</code>, <code>worker</code>, <code>worker_beat</code>, <code>web</code>, <code>plugin_daemon</code>, <code>agent_backend</code></li>
+<li><strong>8 komponen pendukung:</strong> <code>weaviate</code> (database vektor), <code>db_postgres</code>, <code>redis</code>, <code>nginx</code>, <code>ssrf_proxy</code>, <code>agent_ssrf_proxy</code>, <code>sandbox</code>, <code>local_sandbox</code></li>
+<li><strong>1 tugas sekali jalan:</strong> <code>init_permissions</code> — mengatur izin storage, lalu berhenti</li>
+</ul>
+<p><strong>Yang perlu diketahui (singkat):</strong></p>
+<ul>
+<li><strong>nginx</strong> adalah pintu masuk tunggal — mendengarkan di port <strong>80</strong> server Anda dan meneruskan trafik ke <code>web</code> dan <code>api</code>.</li>
+<li>Data (database, file unggahan, vektor) disimpan di folder <strong><code>dify/docker/volumes/</code></strong>. Jangan hapus folder ini.</li>
+<li>Untuk menghentikan semua container: <code>sudo docker compose down</code> (data tetap aman).</li>
+</ul>
+<h2 id="6-catatan-env-dan-keamanan">6. Catatan <code>.env</code> dan keamanan</h2>
+<table>
+<thead>
+<tr>
+<th>Variabel</th>
+<th>Fungsi</th>
+<th>Nilai aman / contoh</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN</code></td>
+<td>Token antara agen dan sandbox lokal (wajib)</td>
+<td>Hasil <code>openssl rand -base64 32</code></td>
+</tr>
+<tr>
+<td><code>SECRET_KEY</code></td>
+<td>Kunci penanda tangan sesi</td>
+<td>Biarkan kosong — Dify membuat kunci permanen otomatis di folder storage</td>
+</tr>
+<tr>
+<td><code>EXPOSE_NGINX_PORT</code></td>
+<td>Port HTTP di server</td>
+<td><code>80</code> (default). Ganti jika port 80 sudah terpakai</td>
+</tr>
+<tr>
+<td><code>EXPOSE_NGINX_SSL_PORT</code></td>
+<td>Port HTTPS di server</td>
+<td><code>443</code> (default)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Aturan keamanan:</strong></p>
+<ul>
+<li><strong>Jangan commit</strong> <code>.env</code> ke GitHub. <code>chmod 600 .env</code> supaya hanya pemilik yang bisa membaca.</li>
+<li>Di <code>.env.example</code> versi 1.18.0, <code>DIFY_AGENT_SERVER_SECRET_KEY</code> berisi nilai default untuk development dan komentar di file itu meminta nilainya <strong>diganti untuk production</strong>. Ikuti petunjuk di komentar tersebut.</li>
+<li>API key penyedia model yang Anda masukkan ke Dify disimpan di database (di dalam <code>volumes/</code>). <strong>Backup</strong> folder itu dan lindungi. Kalau API key bocor, <strong>ganti (rotate)</strong> di penyedia aslinya secepatnya.</li>
+<li><code>http://IP_SERVER</code> adalah HTTP biasa (tidak terenkripsi). Membuka port 80 ke internet tanpa HTTPS <strong>berisiko</strong> — password dan API key dikirim tanpa enkripsi. Pakai tunnel SSH untuk awal, dan siapkan HTTPS sebelum dibagikan ke orang lain (lihat Bagian 9).</li>
+<li>Port yang dipublikasikan Docker biasanya <strong>melewati aturan ufw</strong>. Jangan anggap ufw saja sudah melindungi port 80 — cek juga firewall di panel VPS.</li>
+</ul>
+<h2 id="7-verifikasi-dan-buat-akun-admin">7. Verifikasi dan buat akun admin</h2>
+<pre><code class="language-bash">sudo docker compose ps
+</code></pre>
+<p>✅ Setiap container seharusnya berstatus <strong><code>Up</code></strong> atau <strong><code>healthy</code></strong>. Status <strong><code>Exited</code></strong> untuk <code>init_permissions</code> itu <strong>normal</strong> (tugas sekali jalan).</p>
+<p>Lihat log jika ada container yang restart terus:</p>
+<pre><code class="language-bash">sudo docker compose logs -f api
+sudo docker compose logs -f agent_backend
+</code></pre>
+<p>Buka browser ke halaman inisialisasi admin:</p>
+<p><strong><code>http://IP_SERVER/install</code></strong></p>
+<p>✅ <strong>Tampilan yang diharapkan:</strong> formulir untuk <strong>menyiapkan akun admin</strong> (email, nama, password). Setelah selesai, login di <strong><code>http://IP_SERVER</code></strong>.</p>
+<blockquote>
+<p>⚠️ Selesaikan langkah <code>/install</code> <strong>segera</strong> setelah Dify berjalan. Selama akun admin belum dibuat, siapa pun yang bisa menjangkau server Anda bisa membukanya lebih dulu. Tunnel SSH (di bawah) menghindari risiko ini.</p>
+</blockquote>
+<p>Langkah berikutnya di Dify: buka <strong>Settings › Model Provider</strong>, install plugin penyedia model Anda, lalu masukkan API key.</p>
+<h3 id="akses-pribadi-pakai-tunnel-ssh">Akses pribadi pakai tunnel SSH</h3>
+<p>Tidak ingin membuka port 80 ke internet? Di <code>docker/.env</code>, ikat port nginx ke <code>127.0.0.1</code> saja:</p>
+<pre><code class="language-bash">EXPOSE_NGINX_PORT=127.0.0.1:80
+EXPOSE_NGINX_SSL_PORT=127.0.0.1:443
+</code></pre>
+<p>Lalu jalankan ulang:</p>
+<pre><code class="language-bash">sudo docker compose down
+sudo docker compose up -d
+</code></pre>
+<p>Dari komputer Anda (terminal baru):</p>
+<pre><code class="language-bash">ssh -L 8080:localhost:80 user@IP_SERVER
+</code></pre>
+<p>Buka <code>http://localhost:8080/install</code> di komputer Anda. Hanya Anda (lewat SSH) yang bisa mengakses Dify.</p>
+<blockquote>
+<p>📝 Cara mengikat ke <code>127.0.0.1</code> ini adalah tips kami (format port standar Docker Compose), bukan langkah di dokumentasi resmi Dify. Jika ada fitur yang tidak berfungsi lewat tunnel, kembalikan nilai awal dan pakai HTTPS.</p>
+</blockquote>
+<h2 id="8-error-umum">8. Error umum</h2>
+<table>
+<thead>
+<tr>
+<th>Gejala</th>
+<th>Penyebab umum</th>
+<th>Solusi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>fatal: Remote branch null not found in upstream origin</code></td>
+<td>Batas rate API GitHub — <code>jq</code> mengembalikan <code>null</code></td>
+<td>Clone dengan tag langsung: <code>git clone --branch 1.18.0 https://github.com/langgenius/dify.git</code> (cek versi terbaru di halaman Releases)</td>
+</tr>
+<tr>
+<td><code>jq: command not found</code> / <code>git: command not found</code></td>
+<td>Tool belum di-install</td>
+<td><code>sudo apt install -y git curl jq</code></td>
+</tr>
+<tr>
+<td>Error sintaks compose / fitur tidak didukung</td>
+<td>Docker Compose lebih lama dari 2.24.0</td>
+<td>Cek <code>docker compose version</code>; install ulang Docker pakai skrip resmi</td>
+</tr>
+<tr>
+<td><code>agent_backend</code> atau <code>local_sandbox</code> tidak jalan</td>
+<td><code>DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN</code> kosong</td>
+<td>Isi token (Bagian 5.4), lalu <code>sudo docker compose up -d</code></td>
+</tr>
+<tr>
+<td><code>bind: address already in use</code> (port 80)</td>
+<td>Apache/Nginx sudah berjalan di server</td>
+<td>Hentikan layanan itu (<code>sudo systemctl disable --now apache2</code> atau <code>nginx</code>), atau ganti <code>EXPOSE_NGINX_PORT=8080</code> di <code>.env</code></td>
+</tr>
+<tr>
+<td><code>502 Bad Gateway</code> tepat setelah start</td>
+<td>Container <code>api</code>/<code>web</code> belum siap</td>
+<td>Tunggu beberapa menit, cek <code>sudo docker compose ps</code>. Jika tetap: <code>sudo docker compose down &amp;&amp; sudo docker compose up -d</code></td>
+</tr>
+<tr>
+<td>Container restart terus / <code>Killed</code> / sangat lambat</td>
+<td>RAM tidak cukup (OOM)</td>
+<td>Pastikan minimal 4 GB RAM; naikkan ke 8 GB jika memakai basis pengetahuan besar</td>
+</tr>
+<tr>
+<td><code>permission denied ... /var/run/docker.sock</code></td>
+<td>User bukan anggota grup <code>docker</code></td>
+<td>Pakai <code>sudo</code>, atau jalankan langkah <code>usermod</code> di Bagian 4 lalu login ulang</td>
+</tr>
+<tr>
+<td>Lupa password admin</td>
+<td>—</td>
+<td><code>sudo docker exec -it docker-api-1 flask reset-password</code> lalu ikuti petunjuknya</td>
+</tr>
+<tr>
+<td>Error 401 / CORS setelah ganti domain</td>
+<td>Variabel URL masih menunjuk alamat lama</td>
+<td>Perbarui <code>CONSOLE_API_URL</code>, <code>CONSOLE_WEB_URL</code>, <code>SERVICE_API_URL</code>, <code>APP_API_URL</code>, <code>APP_WEB_URL</code> di <code>.env</code>, lalu restart</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Cek siapa yang memakai port 80:</strong></p>
+<pre><code class="language-bash">sudo ss -tulpn | grep -E ':80 '
+</code></pre>
+<p>Solusi lainnya: <a href="https://docs.dify.ai/en/self-host/deploy/troubleshooting/docker-issues">Dify Docs — Docker Issues</a> dan <a href="https://docs.dify.ai/en/self-host/deploy/troubleshooting/common-issues">Common Issues</a>.</p>
+<h2 id="9-selanjutnya-opsional">9. Selanjutnya (opsional)</h2>
+<p><strong>HTTPS:</strong> jangan biarkan Dify terbuka di HTTP biasa untuk dipakai tim. Dua pilihan:</p>
+<ul>
+<li>Taruh Dify di belakang reverse proxy Anda sendiri (misalnya Caddy/Traefik/Nginx) dengan sertifikat TLS, <strong>atau</strong></li>
+<li>Pakai dukungan HTTPS bawaan nginx Dify — variabel <code>NGINX_HTTPS_ENABLED</code>, <code>NGINX_SSL_CERT_FILENAME</code>, serta bagian <strong>Certbot Configuration</strong> (<code>CERTBOT_EMAIL</code>, <code>CERTBOT_DOMAIN</code>). Ikuti dokumentasi resmi: <a href="https://docs.dify.ai/en/self-host/deploy/configuration/environments">Dify Docs — Environment Variables</a>.</li>
+</ul>
+<p>Setelah HTTPS aktif, perbarui variabel URL (misalnya <code>CONSOLE_API_URL</code>, <code>CONSOLE_WEB_URL</code>) agar memakai <code>https://</code>.</p>
+<p><strong>Ubah pengaturan:</strong> edit <code>docker/.env</code>, lalu:</p>
+<pre><code class="language-bash">sudo docker compose down
+sudo docker compose up -d
+</code></pre>
+<p><strong>Backup sebelum update (wajib):</strong></p>
+<pre><code class="language-bash">cd ~/dify/docker &amp;&amp; sudo docker compose down
+cd ~ &amp;&amp; sudo cp -r dify &quot;dify.bak.$(date +%Y%m%d%H%M%S)&quot;
+</code></pre>
+<p>Perintah <code>cp</code> adalah saran dokumentasi resmi (FAQ). Kami menghentikan container dulu agar salinan database konsisten. Simpan juga salinan backup <strong>di luar</strong> VPS.</p>
+<p><strong>Update Dify:</strong></p>
+<ul>
+<li>Langkah upgrade <strong>bisa berbeda antar versi</strong>. Baca catatan rilis versi tujuan di <a href="https://github.com/langgenius/dify/releases">https://github.com/langgenius/dify/releases</a> dan ikuti petunjuknya.</li>
+<li>Setelah upgrade, bandingkan <code>.env.example</code> baru dengan <code>.env</code> Anda untuk variabel baru atau yang berubah:</li>
+</ul>
+<pre><code class="language-bash">cd ~/dify/docker
+diff .env.example .env
+</code></pre>
+<ul>
+<li>Jika Anda pernah mengubah <code>docker-compose.yaml</code>, <strong>terapkan ulang perubahan Anda ke file baru</strong> — jangan pertahankan file lama, karena versi baru bisa menambah layanan yang dibutuhkan Dify.</li>
+<li>Lalu tarik image baru dan jalankan ulang:</li>
+</ul>
+<pre><code class="language-bash">sudo docker compose pull
+sudo docker compose up -d
+</code></pre>
+<p><strong>Keamanan dasar:</strong> perbarui Ubuntu secara berkala (<code>sudo apt upgrade</code>), pakai kunci SSH (bukan password), dan jangan buka port database atau Redis ke internet.</p>
+<h2 id="10-penafian">10. ⚠️ Penafian</h2>
+<p>Panduan tidak resmi. Tidak berafiliasi dengan LangGenius, Inc. (Dify) atau penyedia VPS mana pun. Nama/logo milik pemiliknya masing-masing. Gunakan dengan risiko Anda sendiri dan selalu cek dokumentasi resmi. <a href="/siap-pasang-guides/id/penafian/">Penafian lengkap</a>.</p>
+<h2 id="11-cap-versi">11. Cap versi</h2>
+<p><code>Rujukan: Dify 1.18.0 (rilis terbaru di GitHub) · Docker Compose 2.24.0+ · Ubuntu 24.04 · Diperbarui 2026-11-02 · Bahasa: id</code></p>
+<p><em>Sumber: <a href="https://docs.dify.ai/en/self-host/deploy/quick-start/docker-compose">Dify Docs — Deploy with Docker Compose</a>, <a href="https://docs.dify.ai/en/self-host/deploy/quick-start/faqs">Dify Docs — FAQs</a>, <a href="https://docs.dify.ai/en/self-host/deploy/configuration/environments">Dify Docs — Environment Variables</a>, <a href="https://github.com/langgenius/dify">Dify GitHub</a>, <a href="https://docs.docker.com/engine/install/ubuntu/">Docker Docs — Ubuntu</a> (dibaca 2026-11-02).</em></p>
+<p>🌐 Baca dalam <a href="/siap-pasang-guides/ms/dify/">Bahasa Melayu</a></p></body></html>
