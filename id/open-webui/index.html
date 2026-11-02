@@ -1,0 +1,384 @@
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cara install Open WebUI pakai Docker Compose (VPS Ubuntu) · SiapPasang</title><style>body{font-family:system-ui,sans-serif;max-width:820px;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#222}
+pre{background:#0f172a;color:#e2e8f0;padding:1rem;overflow:auto;border-radius:8px}code{font-size:.92em}
+blockquote{border-left:4px solid #7c3aed;background:#f5f3ff;margin:1rem 0;padding:.5rem 1rem;border-radius:6px}
+table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.35rem .6rem}
+nav a{margin-right:1rem}</style></head><body>
+<nav><a href="/siap-pasang-guides/">🏠</a><a href="/siap-pasang-guides/ms/">BM</a><a href="/siap-pasang-guides/id/">ID</a><a href="/siap-pasang-guides/id/pengungkapan-afiliasi/">Disclosure</a></nav>
+<blockquote>
+<p>Langkah-langkah di bawah mengikuti dokumentasi resmi Open WebUI (dibaca 2 Nov 2026). Verifikasi di VPS Anda sebelum dipakai untuk production.</p>
+</blockquote>
+<h1 id="cara-install-open-webui-pakai-docker-compose">Cara install Open WebUI pakai Docker Compose</h1>
+<h2 id="1-apa-itu-open-webui">1. Apa itu Open WebUI?</h2>
+<p>Open WebUI adalah <strong>antarmuka chat AI</strong> yang bisa Anda host sendiri — tampilan dan rasanya mirip ChatGPT, tetapi Anda bebas memilih model. Ia bisa terhubung ke <strong>Ollama</strong> (model lokal seperti Llama, Qwen, Gemma) atau <strong>API apa pun yang kompatibel dengan OpenAI</strong> (OpenAI, OpenRouter, Groq, dan lainnya).</p>
+<p>Cocok untuk: tim kecil yang ingin satu portal chat AI terpusat, freelancer yang memakai beberapa penyedia model, dan siapa saja yang ingin riwayat chat tersimpan di server sendiri.</p>
+<ul>
+<li>Repo resmi: <a href="https://github.com/open-webui/open-webui">https://github.com/open-webui/open-webui</a></li>
+<li>Dokumentasi resmi: <a href="https://docs.openwebui.com/getting-started/quick-start/">https://docs.openwebui.com/getting-started/quick-start/</a></li>
+</ul>
+<blockquote>
+<p>💡 <strong>Jujur dulu:</strong> Open WebUI <strong>tidak punya model sendiri</strong>. Ia hanya "meja depan". Anda butuh kunci API dari penyedia model, atau Ollama yang berjalan di mesin yang cukup kuat. Di VPS kecil, cara paling praktis adalah <strong>Open WebUI + API model</strong>.</p>
+</blockquote>
+<h2 id="2-prasyarat">2. Prasyarat</h2>
+<ul>
+<li>VPS dengan <strong>Ubuntu 24.04 atau 22.04</strong> (64-bit) dan akses <code>sudo</code>.</li>
+<li>Dasar SSH: bisa login dengan <code>ssh user@IP_SERVER</code>.</li>
+<li><strong>Salah satu</strong> sumber model:</li>
+<li>Kunci API penyedia yang kompatibel OpenAI (contoh <code>https://api.openai.com/v1</code>), <strong>atau</strong></li>
+<li>Ollama (di server yang sama atau server lain) — butuh RAM jauh lebih besar.</li>
+<li>Port <strong>3000</strong> terbuka di firewall penyedia VPS (atau pakai tunnel SSH — lihat <a href="#akses-pribadi-pakai-tunnel-ssh">Akses pribadi pakai tunnel SSH</a>).</li>
+<li>(Opsional) Domain + reverse proxy untuk HTTPS jika ingin dibagikan ke orang lain.</li>
+</ul>
+<h2 id="3-ukuran-vps-disarankan">3. 📦 Ukuran VPS disarankan</h2>
+<!-- VpsBox tool="open-webui" lang="id" -->
+<blockquote>
+<p><strong>📦 Ukuran VPS disarankan untuk Open WebUI</strong></p>
+<table>
+<thead>
+<tr>
+<th>Penggunaan</th>
+<th>RAM</th>
+<th>vCPU</th>
+<th>Disk</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>UI saja + API model (image <code>:slim</code>)</td>
+<td>1 GB (+ swap 2 GB)</td>
+<td>1</td>
+<td>20 GB</td>
+</tr>
+<tr>
+<td>UI saja + API model (image <code>:main</code>)</td>
+<td>2 GB</td>
+<td>1–2</td>
+<td>25 GB+</td>
+</tr>
+<tr>
+<td>Dengan Ollama lokal (model kecil 3B–8B)</td>
+<td>8 GB+</td>
+<td>4+</td>
+<td>50 GB+</td>
+</tr>
+</tbody>
+</table>
+<p><em>Ukuran di atas adalah rekomendasi kami, bukan angka resmi Open WebUI. Dokumentasi resmi mencatat image <code>:slim</code> memakai sekitar 300 MiB RAM saat idle, tetapi itu bukan kebutuhan minimum. Model lokal (Ollama) butuh RAM kira-kira sebesar ukuran model + ruang lebih; GPU sangat membantu.</em></p>
+<p>Pilihan penyedia (tautan resmi): <a href="https://www.vultr.com/pricing/">Vultr</a> · <a href="https://www.digitalocean.com/products/droplets">DigitalOcean</a> · <a href="https://www.hostinger.com/vps-hosting">Hostinger VPS</a></p>
+<p>Harga bisa berubah — cek harga terbaru di situs resmi. <strong>Atau pakai VPS apa saja / PC sendiri.</strong></p>
+<p><small>ℹ️ Pengungkapan: Tautan di kotak ini akan menjadi tautan afiliasi apabila tautan afiliasi diaktifkan; kami mungkin mendapat komisi tanpa biaya tambahan bagi Anda. Saat ini semua tautan adalah tautan resmi biasa. <a href="/siap-pasang-guides/id/pengungkapan-afiliasi/">Baca pengungkapan lengkap</a>.</small></p>
+</blockquote>
+<!-- /VpsBox -->
+
+<p><strong><code>:main</code> atau <code>:slim</code>?</strong></p>
+<table>
+<thead>
+<tr>
+<th>Image</th>
+<th>Ukuran unduhan (kira-kira)</th>
+<th>Kapan dipilih</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ghcr.io/open-webui/open-webui:main</code></td>
+<td>~1,6 GB</td>
+<td>Ingin fitur lengkap dalam satu container: embedding lokal (RAG/dokumen), speech-to-text Whisper, ekstraksi PDF/Office</td>
+</tr>
+<tr>
+<td><code>ghcr.io/open-webui/open-webui:slim</code></td>
+<td>~200 MB</td>
+<td>Hanya chat lewat API model, VPS kecil. Fitur RAG/suara/PDF butuh layanan eksternal</td>
+</tr>
+<tr>
+<td><code>:cuda</code></td>
+<td>besar</td>
+<td>Server punya GPU Nvidia</td>
+</tr>
+<tr>
+<td><code>:ollama</code></td>
+<td>besar</td>
+<td>Open WebUI + Ollama dalam satu container (all-in-one)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="4-install-docker">4. Install Docker</h2>
+<p>Login ke VPS, lalu perbarui sistem:</p>
+<pre><code class="language-bash">sudo apt update &amp;&amp; sudo apt upgrade -y
+</code></pre>
+<p>Install Docker Engine + plugin Docker Compose memakai skrip resmi Docker:</p>
+<pre><code class="language-bash">curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+</code></pre>
+<blockquote>
+<p>Ingin cara manual (repo apt)? Ikuti panduan resmi: <a href="https://docs.docker.com/engine/install/ubuntu/">https://docs.docker.com/engine/install/ubuntu/</a></p>
+</blockquote>
+<p><strong>Cek instalasi:</strong></p>
+<pre><code class="language-bash">docker --version
+docker compose version
+sudo docker run hello-world
+</code></pre>
+<p>Jika muncul pesan <code>Hello from Docker!</code>, Docker sudah siap.</p>
+<p><strong>(Opsional) Pakai Docker tanpa <code>sudo</code>:</strong></p>
+<pre><code class="language-bash">sudo usermod -aG docker ${USER}
+exec sg docker newgrp
+groups   # pastikan &quot;docker&quot; ada di daftar
+</code></pre>
+<h2 id="5-install-open-webui">5. Install Open WebUI</h2>
+<h3 id="51-buat-folder-proyek">5.1 Buat folder proyek</h3>
+<pre><code class="language-bash">mkdir open-webui
+cd open-webui
+</code></pre>
+<h3 id="52-buat-kunci-rahasia-webui_secret_key">5.2 Buat kunci rahasia (<code>WEBUI_SECRET_KEY</code>)</h3>
+<pre><code class="language-bash">openssl rand -hex 32
+</code></pre>
+<p>Salin output-nya (64 karakter heksadesimal). Kunci ini menandatangani sesi login.</p>
+<blockquote>
+<p>⚠️ <strong>Tetapkan sekali dan simpan.</strong> Tanpa kunci tetap, setiap kali container dibuat ulang (misalnya setelah update), semua pengguna akan ter-logout. Simpan salinannya di password manager Anda.</p>
+</blockquote>
+<p>Simpan di file <code>.env</code> supaya tidak ditulis langsung di <code>compose.yaml</code>:</p>
+<pre><code class="language-bash">nano .env
+</code></pre>
+<pre><code class="language-bash">WEBUI_SECRET_KEY=tempel-output-openssl-di-sini
+</code></pre>
+<p>Simpan (<code>Ctrl+O</code>, <code>Enter</code>, <code>Ctrl+X</code>), lalu kunci izin file:</p>
+<pre><code class="language-bash">chmod 600 .env
+</code></pre>
+<h3 id="53-buat-file-composeyaml">5.3 Buat file <code>compose.yaml</code></h3>
+<pre><code class="language-bash">nano compose.yaml
+</code></pre>
+<p>Tempel isi berikut (berdasarkan contoh resmi Open WebUI):</p>
+<pre><code class="language-yaml">services:
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    ports:
+      - &quot;3000:8080&quot;
+    volumes:
+      - open-webui:/app/backend/data
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    environment:
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
+    restart: unless-stopped
+
+volumes:
+  open-webui:
+</code></pre>
+<blockquote>
+<p>💡 VPS kecil dan hanya pakai API model? Ganti baris <code>image:</code> menjadi <code>ghcr.io/open-webui/open-webui:slim</code>.</p>
+</blockquote>
+<p><strong>Apa fungsi file ini (singkat):</strong></p>
+<ul>
+<li><strong>image</strong> — image resmi Open WebUI dari GitHub Container Registry. <code>:main</code> adalah build bergulir (rolling) terbaru.</li>
+<li><strong>ports <code>3000:8080</code></strong> — UI ada di port 3000 server Anda. Jika 3000 sudah terpakai, ganti angka kiri saja (contoh <code>3001:8080</code>).</li>
+<li><strong>volume <code>open-webui</code></strong> — menyimpan pengguna, riwayat chat, pengaturan, dan file unggahan. Tetap ada setelah update — <strong>jangan dihapus</strong>.</li>
+<li><strong>extra_hosts</strong> — memungkinkan container menjangkau Ollama (atau layanan lain) yang berjalan langsung di server lewat <code>host.docker.internal</code>.</li>
+<li><strong>WEBUI_SECRET_KEY</strong> — dibaca dari <code>.env</code>.</li>
+<li><strong>container_name</strong> — nama tetap <code>open-webui</code> (memudahkan perintah <code>docker logs</code> dan tool seperti Watchtower).</li>
+</ul>
+<h3 id="54-buka-port-ufw">5.4 Buka port (ufw)</h3>
+<pre><code class="language-bash">sudo ufw allow OpenSSH
+sudo ufw allow 3000/tcp
+sudo ufw enable
+sudo ufw status
+</code></pre>
+<blockquote>
+<p>⚠️ Izinkan <strong>OpenSSH dulu</strong> sebelum <code>ufw enable</code>, kalau tidak Anda bisa terkunci dari server.</p>
+<p>📝 Port yang dipublikasikan Docker biasanya <strong>melewati aturan ufw</strong>. Jangan menganggap ufw saja sudah melindungi port 3000 — cek juga firewall di panel VPS, atau pakai metode tunnel SSH di bawah.</p>
+</blockquote>
+<h3 id="55-jalankan-open-webui">5.5 Jalankan Open WebUI</h3>
+<pre><code class="language-bash">sudo docker compose up -d
+</code></pre>
+<p>Unduhan pertama butuh waktu (image <code>:main</code> ~1,6 GB). Untuk menghentikan:</p>
+<pre><code class="language-bash">sudo docker compose stop
+</code></pre>
+<h2 id="6-catatan-env-dan-keamanan">6. Catatan <code>.env</code> dan keamanan</h2>
+<table>
+<thead>
+<tr>
+<th>Variabel</th>
+<th>Fungsi</th>
+<th>Nilai aman / contoh</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>WEBUI_SECRET_KEY</code></td>
+<td>Menandatangani sesi login</td>
+<td>Output <code>openssl rand -hex 32</code> — tetap, jangan diganti</td>
+</tr>
+<tr>
+<td><code>OLLAMA_BASE_URL</code> (opsional)</td>
+<td>Alamat Ollama jika tidak di server yang sama</td>
+<td><code>http://IP_OLLAMA:11434</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Aturan keamanan:</strong></p>
+<ul>
+<li><strong>Jangan commit</strong> <code>.env</code> ke GitHub. Tambahkan <code>.env</code> ke <code>.gitignore</code>.</li>
+<li><code>chmod 600 .env</code> supaya hanya pemilik yang bisa membaca.</li>
+<li>Kunci API penyedia model yang Anda masukkan ke Open WebUI tersimpan di volume <code>open-webui</code>. <strong>Backup volume itu</strong> dan lindungi.</li>
+<li>Kalau kunci API bocor, <strong>ganti (rotate)</strong> di penyedia asal secepatnya.</li>
+<li><code>http://IP:3000</code> adalah HTTP biasa (tidak terenkripsi). Untuk dipakai tim, taruh di belakang reverse proxy dengan HTTPS (misalnya Caddy/Traefik/Nginx) dan baca panduan hardening resmi.</li>
+</ul>
+<h2 id="7-buka-ui-dan-buat-akun-admin">7. Buka UI dan buat akun admin</h2>
+<pre><code class="language-bash">sudo docker compose ps
+sudo docker compose logs -f open-webui
+</code></pre>
+<p>Tunggu sampai log menampilkan <code>Application startup complete</code> (pertama kali bisa sekitar semenit). Tekan <code>Ctrl+C</code> untuk keluar dari log.</p>
+<p>Buka browser: <strong><code>http://IP_SERVER:3000</code></strong></p>
+<p>✅ <strong>Tampilan yang diharapkan:</strong> halaman <strong>Get started with Open WebUI</strong> dengan tombol <strong>Create Admin Account</strong>.</p>
+<ul>
+<li><strong>Akun pertama = admin.</strong> Akun ini mengelola pengguna dan semua pengaturan instance. Pakai password kuat dan simpan — kehilangan password admin berarti terkunci dari pengaturan.</li>
+<li>Setelah akun admin dibuat, pendaftaran baru <strong>otomatis ditutup</strong>. Untuk mengizinkan orang lain mendaftar: avatar › <strong>Settings</strong> › <strong>Admin</strong> › <strong>Authentication</strong> › aktifkan <strong>New Sign Ups</strong>. Akun baru akan berstatus <em>Pending</em> sampai Anda setujui di Admin Panel.</li>
+</ul>
+<h3 id="akses-pribadi-pakai-tunnel-ssh">Akses pribadi pakai tunnel SSH</h3>
+<p>Tidak ingin membuka port 3000 ke internet? Ganti baris port di <code>compose.yaml</code> menjadi:</p>
+<pre><code class="language-yaml">    ports:
+      - &quot;127.0.0.1:3000:8080&quot;
+</code></pre>
+<p>Lalu <code>sudo docker compose up -d</code>, dan dari komputer Anda:</p>
+<pre><code class="language-bash">ssh -L 3000:localhost:3000 user@IP_SERVER
+</code></pre>
+<p>Buka <code>http://localhost:3000</code> di komputer Anda. Hanya Anda (lewat SSH) yang bisa mengakses UI.</p>
+<h2 id="8-hubungkan-model">8. Hubungkan model</h2>
+<p>Open WebUI tidak punya model sendiri. Buka avatar › <strong>Settings</strong> › <strong>Admin</strong> › <strong>Connections</strong>.</p>
+<h3 id="81-api-kompatibel-openai-disarankan-untuk-vps-kecil">8.1 API kompatibel OpenAI (disarankan untuk VPS kecil)</h3>
+<ol>
+<li>Klik <strong>+</strong> di samping <strong>Manage OpenAI API Connections</strong>.</li>
+<li>Masukkan URL penyedia (OpenAI: <code>https://api.openai.com/v1</code>) dan kunci API Anda.</li>
+<li>Klik <strong>Save</strong>. Daftar model akan dimuat otomatis.</li>
+</ol>
+<p>Lalu klik <strong>New Chat</strong>, pilih model di pemilih model, ketik pesan, tekan <code>Enter</code>.</p>
+<blockquote>
+<p>📝 Beberapa penyedia tidak menyediakan daftar model — masukkan ID model secara manual di kolom <strong>Model IDs</strong> pada koneksi tersebut.</p>
+</blockquote>
+<h3 id="82-ollama-di-server-yang-sama">8.2 Ollama di server yang sama</h3>
+<p>Jika Ollama di-install langsung di server (bukan di Docker), Open WebUI otomatis mencarinya di <code>http://host.docker.internal:11434</code> — itulah fungsi baris <code>extra_hosts</code>.</p>
+<p>Install Ollama (skrip resmi):</p>
+<pre><code class="language-bash">curl -fsSL https://ollama.com/install.sh | sh
+</code></pre>
+<p>Ollama harus listen di <code>0.0.0.0</code> (bukan hanya <code>127.0.0.1</code>) agar container Docker bisa menjangkaunya. Untuk layanan systemd:</p>
+<pre><code class="language-bash">sudo systemctl edit ollama
+</code></pre>
+<p>Tambahkan:</p>
+<pre><code class="language-ini">[Service]
+Environment=&quot;OLLAMA_HOST=0.0.0.0&quot;
+</code></pre>
+<pre><code class="language-bash">sudo systemctl daemon-reload
+sudo systemctl restart ollama
+</code></pre>
+<blockquote>
+<p>⚠️ Jangan buka port <strong>11434</strong> di firewall publik — Ollama tidak punya login.</p>
+</blockquote>
+<p>Unduh model: sebagai admin, ketik nama model (contoh <code>qwen2.5:3b</code>) di pemilih model pada chat baru lalu konfirmasi <em>pull</em>. Ingat: model lokal butuh RAM besar (lihat kotak ukuran VPS).</p>
+<h3 id="83-ollama-di-server-lain">8.3 Ollama di server lain</h3>
+<p>Tambahkan di <code>environment:</code>:</p>
+<pre><code class="language-yaml">      - OLLAMA_BASE_URL=http://IP_OLLAMA:11434
+</code></pre>
+<p>Atau atur URL langsung di <strong>Admin › Connections</strong>.</p>
+<h2 id="9-error-umum">9. Error umum</h2>
+<table>
+<thead>
+<tr>
+<th>Gejala</th>
+<th>Penyebab umum</th>
+<th>Solusi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Browser tidak bisa membuka <code>http://IP:3000</code></td>
+<td>Port diblokir di firewall panel VPS, atau container belum siap</td>
+<td>Cek <code>sudo docker compose ps</code>, tunggu <code>Application startup complete</code> di log, cek firewall panel VPS</td>
+</tr>
+<tr>
+<td><code>bind: address already in use</code> (port 3000)</td>
+<td>Aplikasi lain memakai port 3000</td>
+<td>Ganti angka kiri, contoh <code>"3001:8080"</code>, lalu <code>docker compose up -d</code></td>
+</tr>
+<tr>
+<td>Semua pengguna ter-logout setelah update</td>
+<td><code>WEBUI_SECRET_KEY</code> tidak ada / berubah</td>
+<td>Tetapkan kunci tetap di <code>.env</code>, jangan dibuat ulang</td>
+</tr>
+<tr>
+<td>Daftar model kosong (Ollama)</td>
+<td>Ollama hanya listen di <code>127.0.0.1</code></td>
+<td>Set <code>OLLAMA_HOST=0.0.0.0</code> (Bagian 8.2), restart Ollama</td>
+</tr>
+<tr>
+<td>Daftar model kosong (API)</td>
+<td>URL/kunci salah, atau penyedia tidak punya daftar model</td>
+<td>Pastikan URL diakhiri <code>/v1</code>, cek kunci, isi <strong>Model IDs</strong> secara manual</td>
+</tr>
+<tr>
+<td>Container restart terus / <code>Killed</code> / lambat</td>
+<td>RAM tidak cukup (OOM)</td>
+<td>Ganti ke image <code>:slim</code>, tambah swap (di bawah), atau upgrade RAM</td>
+</tr>
+<tr>
+<td>Jawaban kosong / chat macet di belakang reverse proxy</td>
+<td>WebSocket tidak diteruskan</td>
+<td>Aktifkan dukungan WebSocket (header <code>Upgrade</code>/<code>Connection</code>) di proxy</td>
+</tr>
+<tr>
+<td><code>permission denied ... /var/run/docker.sock</code></td>
+<td>User bukan anggota grup <code>docker</code></td>
+<td>Pakai <code>sudo</code>, atau jalankan langkah <code>usermod</code> di Bagian 4 lalu login ulang</td>
+</tr>
+<tr>
+<td><code>docker-compose: command not found</code></td>
+<td>Memakai perintah lama (v1)</td>
+<td>Pakai <code>docker compose</code> (dengan spasi, plugin v2)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Cek siapa yang memakai port 3000:</strong></p>
+<pre><code class="language-bash">sudo ss -tulpn | grep ':3000 '
+</code></pre>
+<p><strong>Tambah swap 2 GB (untuk VPS 1 GB):</strong></p>
+<pre><code class="language-bash">sudo fallocate -l 2G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+free -h
+</code></pre>
+<h2 id="10-selanjutnya-opsional">10. Selanjutnya (opsional)</h2>
+<p><strong>Update Open WebUI</strong> (backup dulu — lihat di bawah):</p>
+<pre><code class="language-bash">cd ~/open-webui
+sudo docker compose pull
+sudo docker compose up -d
+</code></pre>
+<p>Data Anda tetap di volume, dan <code>WEBUI_SECRET_KEY</code> yang sama membuat pengguna tetap login.</p>
+<blockquote>
+<p>💡 Ingin lebih terkontrol? <code>:main</code> adalah build bergulir. Untuk production, tetapkan versi, contoh <code>image: ghcr.io/open-webui/open-webui:vX.Y.Z</code> (lihat halaman <em>releases</em> di GitHub), dan naikkan versi secara manual setelah membaca catatan rilis.</p>
+</blockquote>
+<p><strong>Backup volume data:</strong></p>
+<pre><code class="language-bash">sudo docker volume ls     # cari nama volume, biasanya open-webui_open-webui
+sudo docker compose stop
+sudo docker run --rm \
+  -v open-webui_open-webui:/data \
+  -v &quot;$(pwd)&quot;:/backup \
+  alpine tar czf /backup/open-webui-$(date +%F).tar.gz -C /data .
+sudo docker compose start
+</code></pre>
+<p>Simpan file backup <strong>di luar</strong> VPS (misalnya komputer Anda atau cloud storage). Simpan juga salinan <code>.env</code> (kunci rahasia) di tempat aman.</p>
+<p><strong>Restore ke volume kosong:</strong></p>
+<pre><code class="language-bash">sudo docker compose down
+sudo docker run --rm \
+  -v open-webui_open-webui:/data \
+  -v &quot;$(pwd)&quot;:/backup \
+  alpine sh -c &quot;cd /data &amp;&amp; tar xzf /backup/open-webui-TANGGAL.tar.gz&quot;
+sudo docker compose up -d
+</code></pre>
+<p><strong>Keamanan dasar:</strong> perbarui Ubuntu secara berkala (<code>sudo apt upgrade</code>), pakai kunci SSH (bukan password), pakai HTTPS jika dibagikan ke orang lain, dan jangan ekspos port Ollama <code>11434</code> ke internet.</p>
+<h2 id="11-penafian">11. ⚠️ Penafian</h2>
+<p>Panduan tidak resmi. Tidak berafiliasi dengan proyek Open WebUI, Ollama, OpenAI, atau penyedia VPS mana pun. Nama/logo milik pemiliknya masing-masing. Gunakan dengan risiko sendiri dan selalu cek dokumentasi resmi. <a href="/siap-pasang-guides/id/penafian/">Penafian lengkap</a>.</p>
+<h2 id="12-cap-versi">12. Cap versi</h2>
+<p><code>Rujukan: Open WebUI ghcr.io/open-webui/open-webui:main (menurut dokumentasi resmi) · Docker 27.x+ · Ubuntu 24.04 · Diperbarui 2026-11-02 · Bahasa: id</code></p>
+<p><em>Sumber: <a href="https://docs.openwebui.com/getting-started/quick-start/">Open WebUI Docs — Quick Start</a>, <a href="https://github.com/open-webui/open-webui">Open WebUI GitHub</a>, <a href="https://docs.docker.com/engine/install/ubuntu/">Docker Docs — Ubuntu</a> (dibaca 2026-11-02).</em></p>
+<p>🌐 Baca dalam <a href="/siap-pasang-guides/ms/open-webui/">Bahasa Melayu</a></p></body></html>
