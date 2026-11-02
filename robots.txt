@@ -1,2 +1,4 @@
 User-agent: *
 Allow: /
+
+Sitemap: https://kaneberry.github.io/siap-pasang-guides/sitemap.xml
