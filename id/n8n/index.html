@@ -1,0 +1,382 @@
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>Cara install n8n pakai Docker Compose (VPS Ubuntu) · SiapPasang (DRAFT)</title><style>body{font-family:system-ui,sans-serif;max-width:820px;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#222}
+pre{background:#0f172a;color:#e2e8f0;padding:1rem;overflow:auto;border-radius:8px}code{font-size:.92em}
+blockquote{border-left:4px solid #7c3aed;background:#f5f3ff;margin:1rem 0;padding:.5rem 1rem;border-radius:6px}
+table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:.35rem .6rem}
+.draft{background:#fef3c7;border:1px solid #f59e0b;padding:.5rem 1rem;border-radius:6px;margin-bottom:1rem}
+nav a{margin-right:1rem}</style></head><body>
+<div class="draft">🚧 DRAFT — Phase A di GitHub Pages. Panduan belum diuji penuh. Affiliate belum aktif.</div>
+<nav><a href="/siap-pasang-guides/">🏠</a><a href="/siap-pasang-guides/ms/">BM</a><a href="/siap-pasang-guides/id/">ID</a><a href="/siap-pasang-guides/id/pengungkapan-afiliasi/">Disclosure</a></nav>
+<blockquote>
+<p><strong>🧪 Status: belum diuji penuh.</strong> Langkah-langkah di bawah diambil dari dokumentasi resmi n8n (dibaca 2 Nov 2026), tetapi belum kami jalankan sepenuhnya di VPS sungguhan. Label ini akan kami perbarui setelah pengujian.</p>
+</blockquote>
+<h1 id="cara-install-n8n-pakai-docker-compose">Cara install n8n pakai Docker Compose</h1>
+<h2 id="1-apa-itu-n8n">1. Apa itu n8n?</h2>
+<p>n8n adalah tool <strong>otomatisasi workflow</strong> — mirip Zapier/Make, tetapi bisa Anda host sendiri. Anda menghubungkan aplikasi (Google Sheets, Telegram, WhatsApp API, LLM, webhook) dan membangun otomatisasi secara visual.</p>
+<p>Cocok untuk: pemilik UMKM, freelancer, dan tim IT kecil yang ingin otomatisasi tanpa biaya per-task.</p>
+<ul>
+<li>Repo resmi: <a href="https://github.com/n8n-io/n8n">https://github.com/n8n-io/n8n</a></li>
+<li>Dokumentasi resmi: <a href="https://docs.n8n.io/hosting/installation/server-setups/docker-compose/">https://docs.n8n.io/hosting/installation/server-setups/docker-compose/</a></li>
+</ul>
+<blockquote>
+<p>💡 <strong>Jujur dulu:</strong> n8n sendiri menyebutkan self-hosting cocok untuk pengguna yang terbiasa mengelola server. Kalau Anda tidak mau repot mengurus server, backup, dan keamanan, <strong>n8n Cloud</strong> adalah pilihan yang lebih mudah: <a href="https://n8n.io/pricing/">https://n8n.io/pricing/</a></p>
+</blockquote>
+<h2 id="2-prasyarat">2. Prasyarat</h2>
+<ul>
+<li>VPS dengan <strong>Ubuntu 24.04 atau 22.04</strong> (64-bit) dan akses <code>sudo</code>.</li>
+<li><strong>Domain atau subdomain</strong> (contoh <code>n8n.contoh.com</code>) — dibutuhkan untuk HTTPS otomatis. Belum punya domain? Lihat <a href="#opsi-tanpa-domain-tunnel-ssh">Opsi tanpa domain</a>.</li>
+<li>Dasar SSH: bisa login dengan <code>ssh user@IP_SERVER</code>.</li>
+<li>Email untuk sertifikat SSL Let's Encrypt.</li>
+<li>Port <strong>80</strong> dan <strong>443</strong> terbuka di firewall penyedia VPS.</li>
+</ul>
+<h2 id="3-ukuran-vps-disarankan">3. 📦 Ukuran VPS disarankan</h2>
+<!-- VpsBox tool="n8n" lang="id" -->
+<blockquote>
+<p><strong>📦 Ukuran VPS disarankan untuk n8n</strong></p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>RAM</th>
+<th>vCPU</th>
+<th>Disk</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Minimum</td>
+<td>1 GB (+ swap 2 GB)</td>
+<td>1</td>
+<td>20 GB</td>
+</tr>
+<tr>
+<td>Disarankan</td>
+<td>2 GB</td>
+<td>2</td>
+<td>20 GB+</td>
+</tr>
+</tbody>
+</table>
+<p><em>Ukuran di atas adalah rekomendasi kami untuk beban ringan–sedang, bukan angka resmi n8n. Workflow berat (data besar, kode, AI) butuh lebih.</em></p>
+<p>Pilihan penyedia (tautan resmi): <a href="https://www.vultr.com/pricing/">Vultr</a> · <a href="https://www.digitalocean.com/products/droplets">DigitalOcean</a> · <a href="https://www.hostinger.com/vps-hosting">Hostinger VPS</a></p>
+<p>Harga bisa berubah — cek harga terbaru di situs resmi. <strong>Atau pakai VPS apa saja / PC sendiri.</strong></p>
+<p><small>ℹ️ Pengungkapan: Tautan di kotak ini akan menjadi tautan afiliasi apabila tautan afiliasi diaktifkan; kami mungkin mendapat komisi tanpa biaya tambahan bagi Anda. Saat ini semua tautan adalah tautan resmi biasa. <a href="/siap-pasang-guides/id/pengungkapan-afiliasi/">Baca pengungkapan lengkap</a>.</small></p>
+</blockquote>
+<!-- /VpsBox -->
+
+<h2 id="4-install-docker">4. Install Docker</h2>
+<p>Login ke VPS, lalu perbarui sistem:</p>
+<pre><code class="language-bash">sudo apt update &amp;&amp; sudo apt upgrade -y
+</code></pre>
+<p>Install Docker Engine + plugin Docker Compose dengan skrip resmi Docker:</p>
+<pre><code class="language-bash">curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+</code></pre>
+<blockquote>
+<p>Ingin cara manual (repo apt)? Ikuti panduan resmi: <a href="https://docs.docker.com/engine/install/ubuntu/">https://docs.docker.com/engine/install/ubuntu/</a></p>
+</blockquote>
+<p><strong>Cek instalasi:</strong></p>
+<pre><code class="language-bash">docker --version
+docker compose version
+sudo docker run hello-world
+</code></pre>
+<p>Jika muncul pesan <code>Hello from Docker!</code>, Docker sudah siap.</p>
+<p><strong>(Opsional) Pakai Docker tanpa <code>sudo</code>:</strong></p>
+<pre><code class="language-bash">sudo usermod -aG docker ${USER}
+exec sg docker newgrp
+groups   # pastikan &quot;docker&quot; ada di daftar
+</code></pre>
+<h2 id="5-install-n8n">5. Install n8n</h2>
+<h3 id="51-atur-dns">5.1 Atur DNS</h3>
+<p>Di panel domain Anda, tambahkan record <strong>A</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Tipe</th>
+<th>Nama</th>
+<th>Tujuan</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A</td>
+<td><code>n8n</code> (atau subdomain pilihan)</td>
+<td><code>IP_SERVER_ANDA</code></td>
+</tr>
+</tbody>
+</table>
+<p>Tunggu beberapa menit. Cek dengan <code>ping n8n.contoh.com</code> — hasilnya harus menunjukkan IP server Anda.</p>
+<h3 id="52-buka-firewall-ufw">5.2 Buka firewall (ufw)</h3>
+<pre><code class="language-bash">sudo ufw allow OpenSSH
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw enable
+sudo ufw status
+</code></pre>
+<blockquote>
+<p>⚠️ Izinkan <strong>OpenSSH dulu</strong> sebelum <code>ufw enable</code>, kalau tidak Anda bisa terkunci dari server.</p>
+</blockquote>
+<h3 id="53-buat-folder-proyek-dan-file-env">5.3 Buat folder proyek dan file <code>.env</code></h3>
+<pre><code class="language-bash">mkdir n8n-compose
+cd n8n-compose
+nano .env
+</code></pre>
+<p>Tempel lalu <strong>ganti</strong> nilainya sesuai data Anda:</p>
+<pre><code class="language-bash"># Domain utama
+DOMAIN_NAME=contoh.com
+
+# Subdomain — n8n akan bisa diakses di https://n8n.contoh.com
+SUBDOMAIN=n8n
+
+# Zona waktu untuk node Schedule/Cron (WITA: Asia/Makassar, WIT: Asia/Jayapura)
+GENERIC_TIMEZONE=Asia/Jakarta
+
+# Email untuk sertifikat TLS/SSL (Let's Encrypt)
+SSL_EMAIL=anda@contoh.com
+</code></pre>
+<p>Simpan (<code>Ctrl+O</code>, <code>Enter</code>, <code>Ctrl+X</code>), lalu kunci izin file:</p>
+<pre><code class="language-bash">chmod 600 .env
+</code></pre>
+<h3 id="54-buat-folder-file-lokal">5.4 Buat folder file lokal</h3>
+<p>Folder ini dibagi antara n8n dan server (misalnya untuk node <em>Read/Write Files from Disk</em>):</p>
+<pre><code class="language-bash">mkdir local-files
+</code></pre>
+<h3 id="55-buat-file-composeyaml">5.5 Buat file <code>compose.yaml</code></h3>
+<pre><code class="language-bash">nano compose.yaml
+</code></pre>
+<p>Tempel isi berikut (sama dengan contoh resmi n8n):</p>
+<pre><code class="language-yaml">services:
+  traefik:
+    image: &quot;traefik&quot;
+    restart: always
+    command:
+      - &quot;--api.insecure=true&quot;
+      - &quot;--providers.docker=true&quot;
+      - &quot;--providers.docker.exposedbydefault=false&quot;
+      - &quot;--entrypoints.web.address=:80&quot;
+      - &quot;--entrypoints.web.http.redirections.entryPoint.to=websecure&quot;
+      - &quot;--entrypoints.web.http.redirections.entrypoint.scheme=https&quot;
+      - &quot;--entrypoints.websecure.address=:443&quot;
+      - &quot;--certificatesresolvers.mytlschallenge.acme.tlschallenge=true&quot;
+      - &quot;--certificatesresolvers.mytlschallenge.acme.email=${SSL_EMAIL}&quot;
+      - &quot;--certificatesresolvers.mytlschallenge.acme.storage=/letsencrypt/acme.json&quot;
+    ports:
+      - &quot;80:80&quot;
+      - &quot;443:443&quot;
+    volumes:
+      - traefik_data:/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  n8n:
+    image: n8nio/n8n
+    restart: always
+    ports:
+      - &quot;127.0.0.1:5678:5678&quot;
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.n8n.rule=Host(`${SUBDOMAIN}.${DOMAIN_NAME}`)
+      - traefik.http.routers.n8n.tls=true
+      - traefik.http.routers.n8n.entrypoints=web,websecure
+      - traefik.http.routers.n8n.tls.certresolver=mytlschallenge
+      - traefik.http.middlewares.n8n.headers.SSLRedirect=true
+      - traefik.http.middlewares.n8n.headers.STSSeconds=315360000
+      - traefik.http.middlewares.n8n.headers.browserXSSFilter=true
+      - traefik.http.middlewares.n8n.headers.contentTypeNosniff=true
+      - traefik.http.middlewares.n8n.headers.forceSTSHeader=true
+      - traefik.http.middlewares.n8n.headers.SSLHost=${DOMAIN_NAME}
+      - traefik.http.middlewares.n8n.headers.STSIncludeSubdomains=true
+      - traefik.http.middlewares.n8n.headers.STSPreload=true
+      - traefik.http.routers.n8n.middlewares=n8n@docker
+    environment:
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      - N8N_HOST=${SUBDOMAIN}.${DOMAIN_NAME}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=https
+      - NODE_ENV=production
+      - N8N_WEBHOOK_URL=https://${SUBDOMAIN}.${DOMAIN_NAME}/
+      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
+      - TZ=${GENERIC_TIMEZONE}
+      - N8N_RESTRICT_FILE_ACCESS_TO=/files
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./local-files:/files
+
+volumes:
+  n8n_data:
+  traefik_data:
+</code></pre>
+<p><strong>Fungsi file ini (singkat):</strong></p>
+<ul>
+<li><strong>traefik</strong> — "penjaga pintu". Menerima trafik di port 80/443, mengambil sertifikat HTTPS gratis secara otomatis, lalu meneruskannya ke n8n.</li>
+<li><strong>n8n</strong> — aplikasi n8n. Port <code>5678</code> hanya dibuka di <code>127.0.0.1</code> (di dalam server saja), jadi akses dari luar harus lewat HTTPS melalui Traefik.</li>
+<li><strong>n8n_data</strong> — menyimpan database SQLite <strong>dan kunci enkripsi</strong> (encryption key) n8n. Jangan dihapus!</li>
+<li><strong>traefik_data</strong> — menyimpan sertifikat SSL.</li>
+<li><strong>./local-files → /files</strong> — folder bersama. Di n8n, gunakan path <code>/files</code>.</li>
+</ul>
+<blockquote>
+<p>📝 <code>N8N_WEBHOOK_URL</code> tersedia mulai n8n 2.30.0. Jika Anda memakai versi lebih lama, ganti dengan <code>WEBHOOK_URL</code>.</p>
+</blockquote>
+<h3 id="56-jalankan-n8n">5.6 Jalankan n8n</h3>
+<pre><code class="language-bash">sudo docker compose up -d
+</code></pre>
+<p>Untuk menghentikan:</p>
+<pre><code class="language-bash">sudo docker compose stop
+</code></pre>
+<h2 id="6-catatan-env">6. Catatan <code>.env</code></h2>
+<table>
+<thead>
+<tr>
+<th>Variabel</th>
+<th>Fungsi</th>
+<th>Nilai aman / contoh</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DOMAIN_NAME</code></td>
+<td>Domain utama Anda</td>
+<td><code>contoh.com</code></td>
+</tr>
+<tr>
+<td><code>SUBDOMAIN</code></td>
+<td>Subdomain untuk n8n</td>
+<td><code>n8n</code> → <code>https://n8n.contoh.com</code></td>
+</tr>
+<tr>
+<td><code>GENERIC_TIMEZONE</code></td>
+<td>Zona waktu node jadwal (default New York jika kosong)</td>
+<td><code>Asia/Jakarta</code></td>
+</tr>
+<tr>
+<td><code>SSL_EMAIL</code></td>
+<td>Email notifikasi sertifikat Let's Encrypt</td>
+<td>email yang aktif Anda baca</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Aturan keamanan:</strong></p>
+<ul>
+<li><strong>Jangan commit</strong> <code>.env</code> ke GitHub. Tambahkan <code>.env</code> ke <code>.gitignore</code>.</li>
+<li><code>chmod 600 .env</code> supaya hanya pemilik yang bisa membaca.</li>
+<li>API key/token yang Anda masukkan ke n8n disimpan sebagai <em>credentials</em> yang dienkripsi dengan kunci di volume <code>n8n_data</code>. <strong>Backup volume itu</strong> — tanpa kunci, credentials tidak bisa dibuka.</li>
+<li>Jika token bocor, segera <strong>ganti (rotate)</strong> di penyedia aslinya.</li>
+<li>Tidak ada password default: Anda membuat akun pemilik (owner) sendiri saat pertama kali membuka n8n — pakai password yang kuat.</li>
+</ul>
+<h2 id="7-verifikasi">7. Verifikasi</h2>
+<pre><code class="language-bash">sudo docker compose ps
+</code></pre>
+<p>Seharusnya ada dua service (<code>traefik</code> dan <code>n8n</code>) dengan status <code>running</code> / <code>Up</code>.</p>
+<p>Lihat log jika perlu:</p>
+<pre><code class="language-bash">sudo docker compose logs -f n8n
+sudo docker compose logs -f traefik
+</code></pre>
+<p>Buka browser: <strong><code>https://n8n.contoh.com</code></strong> (sesuai domain Anda).</p>
+<p>✅ <strong>Tampilan yang diharapkan:</strong> halaman n8n untuk <strong>membuat akun pemilik (owner account)</strong> — isi email, nama, dan password. Setelah itu Anda masuk ke editor workflow.</p>
+<p>n8n hanya bisa diakses lewat <strong>HTTPS</strong>, bukan HTTP biasa.</p>
+<h3 id="opsi-tanpa-domain-tunnel-ssh">Opsi tanpa domain (tunnel SSH)</h3>
+<p>Belum punya domain? Anda bisa mencoba n8n secara pribadi tanpa membuka port publik:</p>
+<pre><code class="language-bash"># Di VPS:
+sudo docker volume create n8n_data
+sudo docker run -d --name n8n --restart unless-stopped \
+  -p 127.0.0.1:5678:5678 \
+  -e GENERIC_TIMEZONE=&quot;Asia/Jakarta&quot; -e TZ=&quot;Asia/Jakarta&quot; \
+  -e N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true \
+  -v n8n_data:/home/node/.n8n \
+  n8nio/n8n
+
+# Di komputer Anda (terminal baru):
+ssh -L 5678:localhost:5678 user@IP_SERVER
+</code></pre>
+<p>Lalu buka <code>http://localhost:5678</code> di komputer Anda. Webhook dari luar <strong>tidak</strong> akan berfungsi di mode ini — hanya untuk belajar/uji coba.</p>
+<h2 id="8-error-umum">8. Error umum</h2>
+<table>
+<thead>
+<tr>
+<th>Gejala</th>
+<th>Penyebab umum</th>
+<th>Solusi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bind: address already in use</code> (port 80/443)</td>
+<td>Apache/Nginx sudah berjalan</td>
+<td>Cek port (perintah di bawah tabel) → hentikan service itu (<code>sudo systemctl disable --now apache2</code> atau <code>nginx</code>)</td>
+</tr>
+<tr>
+<td><code>permission denied ... /var/run/docker.sock</code></td>
+<td>User bukan anggota grup <code>docker</code></td>
+<td>Pakai <code>sudo</code>, atau jalankan langkah <code>usermod</code> di Bagian 4 lalu login ulang</td>
+</tr>
+<tr>
+<td>Browser menampilkan peringatan sertifikat / sertifikat tidak terbit</td>
+<td>DNS belum menyebar, atau port 80/443 diblokir</td>
+<td>Cek record A, <code>ufw status</code>, <strong>dan firewall di panel VPS</strong>. Lihat <code>sudo docker compose logs traefik</code> untuk error ACME</td>
+</tr>
+<tr>
+<td>n8n restart terus / <code>Killed</code> / lambat</td>
+<td>RAM kurang (OOM)</td>
+<td>Tambah swap (di bawah) atau upgrade ke RAM 2 GB</td>
+</tr>
+<tr>
+<td><code>EACCES: permission denied</code> pada <code>/files</code></td>
+<td>Pemilik folder <code>local-files</code> salah</td>
+<td><code>sudo chown -R 1000:1000 local-files</code> (n8n berjalan sebagai UID 1000)</td>
+</tr>
+<tr>
+<td>URL webhook menampilkan <code>localhost:5678</code></td>
+<td>Variabel webhook belum diatur</td>
+<td>Pastikan <code>N8N_WEBHOOK_URL</code> (≥2.30.0) atau <code>WEBHOOK_URL</code> (versi lama) benar, lalu <code>docker compose up -d</code></td>
+</tr>
+<tr>
+<td><code>docker-compose: command not found</code></td>
+<td>Memakai perintah lama (v1)</td>
+<td>Gunakan <code>docker compose</code> (pakai spasi, plugin v2)</td>
+</tr>
+<tr>
+<td>Peringatan <em>secure cookie</em> saat membuka <code>http://IP:5678</code></td>
+<td>n8n mengharapkan HTTPS</td>
+<td>Pakai domain + HTTPS, atau tunnel SSH ke <code>localhost</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Cek siapa yang memakai port 80/443:</strong></p>
+<pre><code class="language-bash">sudo ss -tulpn | grep -E ':(80|443) '
+</code></pre>
+<p><strong>Tambah swap 2 GB (untuk VPS 1 GB):</strong></p>
+<pre><code class="language-bash">sudo fallocate -l 2G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+free -h
+</code></pre>
+<h2 id="9-selanjutnya-opsional">9. Selanjutnya (opsional)</h2>
+<p><strong>Update n8n:</strong></p>
+<pre><code class="language-bash">cd ~/n8n-compose
+sudo docker compose pull
+sudo docker compose down
+sudo docker compose up -d
+</code></pre>
+<blockquote>
+<p>💡 Ingin lebih terkontrol? Kunci versi, misalnya <code>image: n8nio/n8n:2.45.7</code>, lalu naikkan versi secara manual setelah membaca catatan rilis. n8n merilis versi minor hampir setiap minggu; gunakan versi <strong>stable</strong> untuk produksi.</p>
+</blockquote>
+<p><strong>Backup volume data:</strong></p>
+<pre><code class="language-bash">sudo docker volume ls     # cari nama volume, biasanya n8n-compose_n8n_data
+sudo docker run --rm \
+  -v n8n-compose_n8n_data:/data \
+  -v &quot;$(pwd)&quot;:/backup \
+  alpine tar czf /backup/n8n_data-$(date +%F).tar.gz -C /data .
+</code></pre>
+<p>Simpan file backup <strong>di luar</strong> VPS (misalnya di komputer Anda atau cloud storage).</p>
+<p><strong>Ekspor workflow (tambahan):</strong></p>
+<pre><code class="language-bash">sudo docker compose exec n8n n8n export:workflow --all --output=/files/workflows-backup.json
+</code></pre>
+<p>File akan muncul di folder <code>local-files/</code>.</p>
+<p><strong>Keamanan dasar:</strong> update Ubuntu secara berkala (<code>sudo apt upgrade</code>), gunakan SSH key (bukan password), dan jangan membuka port 5678 langsung ke internet.</p>
+<h2 id="10-penafian">10. ⚠️ Penafian</h2>
+<p>Panduan tidak resmi. Tidak berafiliasi dengan n8n GmbH atau penyedia VPS mana pun. Nama/logo milik pemiliknya masing-masing. Gunakan dengan risiko Anda sendiri dan selalu cek dokumentasi resmi. <a href="/siap-pasang-guides/id/penafian/">Penafian lengkap</a>.</p>
+<h2 id="11-cap-versi">11. Cap versi</h2>
+<p><code>Rujukan: n8n 2.45.7 (stable menurut dokumentasi resmi) · Docker 27.x+ · Ubuntu 24.04 · Diperbarui 2026-11-02 · Status: belum diuji penuh · Bahasa: id</code></p>
+<p><em>Sumber: <a href="https://docs.n8n.io/hosting/installation/server-setups/docker-compose/">n8n Docs — Docker Compose</a>, <a href="https://docs.n8n.io/hosting/installation/docker/">n8n Docs — Docker</a>, <a href="https://docs.docker.com/engine/install/ubuntu/">Docker Docs — Ubuntu</a> (dibaca 2026-11-02).</em></p>
+<p>🌐 Baca dalam <a href="/siap-pasang-guides/ms/n8n/">Bahasa Melayu</a></p></body></html>
