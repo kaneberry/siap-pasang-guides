@@ -1,30 +1,35 @@
 # SiapPasang
 
-Panduan langkah demi langkah untuk pasang alat open-source popular guna **Docker Compose** di VPS Ubuntu — dalam **Bahasa Melayu** dan **Bahasa Indonesia**.
+Self-hosted install guides for five open-source tools, in Bahasa Malaysia and Bahasa Indonesia.
 
-🌐 Laman: https://kaneberry.github.io/siap-pasang-guides/
+## Bahasa Malaysia
 
-## Panduan
+Panduan langkah demi langkah untuk pasang alat sumber terbuka guna Docker Compose di VPS Ubuntu.
 
-| Alat | Bahasa Melayu | Bahasa Indonesia |
-|------|---------------|------------------|
-| **n8n** — automasi aliran kerja | [Cara pasang n8n](https://kaneberry.github.io/siap-pasang-guides/ms/n8n/) | [Cara install n8n](https://kaneberry.github.io/siap-pasang-guides/id/n8n/) |
-| **Open WebUI** — antara muka chat AI (Ollama / API) | [Cara pasang Open WebUI](https://kaneberry.github.io/siap-pasang-guides/ms/open-webui/) | [Cara install Open WebUI](https://kaneberry.github.io/siap-pasang-guides/id/open-webui/) |
-| **Dify** — platform bina aplikasi & ejen AI | [Cara pasang Dify](https://kaneberry.github.io/siap-pasang-guides/ms/dify/) | [Cara install Dify](https://kaneberry.github.io/siap-pasang-guides/id/dify/) |
-| **Immich** — simpan & backup foto sendiri (alternatif Google Photos) | [Cara pasang Immich](https://kaneberry.github.io/siap-pasang-guides/ms/immich/) | [Cara install Immich](https://kaneberry.github.io/siap-pasang-guides/id/immich/) |
-| **Uptime Kuma** — pantau uptime laman & server | [Cara pasang Uptime Kuma](https://kaneberry.github.io/siap-pasang-guides/ms/uptime-kuma/) | [Cara install Uptime Kuma](https://kaneberry.github.io/siap-pasang-guides/id/uptime-kuma/) |
+[Bahasa Malaysia](https://kaneberry.github.io/siap-pasang-guides/ms/)
 
-Indeks bahasa: [Bahasa Melayu](https://kaneberry.github.io/siap-pasang-guides/ms/) · [Bahasa Indonesia](https://kaneberry.github.io/siap-pasang-guides/id/)
+- [n8n](https://kaneberry.github.io/siap-pasang-guides/ms/n8n/)
+- [Open WebUI](https://kaneberry.github.io/siap-pasang-guides/ms/open-webui/)
+- [Dify](https://kaneberry.github.io/siap-pasang-guides/ms/dify/)
+- [Immich](https://kaneberry.github.io/siap-pasang-guides/ms/immich/)
+- [Uptime Kuma](https://kaneberry.github.io/siap-pasang-guides/ms/uptime-kuma/)
 
-Setiap panduan merangkumi prasyarat, saiz VPS disyorkan, langkah pemasangan, ralat biasa, soalan lazim (FAQ), kemas kini dan backup, serta cap versi dan sumber rasmi.
+[Pendedahan](https://kaneberry.github.io/siap-pasang-guides/ms/pendedahan-afiliasi/) · [Penafian](https://kaneberry.github.io/siap-pasang-guides/ms/penafian/) · [Privasi](https://kaneberry.github.io/siap-pasang-guides/ms/privasi/)
 
-## Maklumat
+## Bahasa Indonesia
 
-- [Pendedahan Afiliasi](https://kaneberry.github.io/siap-pasang-guides/ms/pendedahan-afiliasi/) · [Pengungkapan Afiliasi](https://kaneberry.github.io/siap-pasang-guides/id/pengungkapan-afiliasi/)
-- [Penafian (BM)](https://kaneberry.github.io/siap-pasang-guides/ms/penafian/) · [Penafian (ID)](https://kaneberry.github.io/siap-pasang-guides/id/penafian/)
-- [Privasi (BM)](https://kaneberry.github.io/siap-pasang-guides/ms/privasi/) · [Privasi (ID)](https://kaneberry.github.io/siap-pasang-guides/id/privasi/)
-- [sitemap.xml](https://kaneberry.github.io/siap-pasang-guides/sitemap.xml)
+Panduan langkah demi langkah untuk menginstal perangkat sumber terbuka pakai Docker Compose di VPS Ubuntu.
 
-## Nota operasi
+[Bahasa Indonesia](https://kaneberry.github.io/siap-pasang-guides/id/)
 
-Pelan trafik tanpa kos (SEO, kebersihan repo, jadual mingguan): [TRAFFIC.md](TRAFFIC.md).
+- [n8n](https://kaneberry.github.io/siap-pasang-guides/id/n8n/)
+- [Open WebUI](https://kaneberry.github.io/siap-pasang-guides/id/open-webui/)
+- [Dify](https://kaneberry.github.io/siap-pasang-guides/id/dify/)
+- [Immich](https://kaneberry.github.io/siap-pasang-guides/id/immich/)
+- [Uptime Kuma](https://kaneberry.github.io/siap-pasang-guides/id/uptime-kuma/)
+
+[Pengungkapan](https://kaneberry.github.io/siap-pasang-guides/id/pengungkapan-afiliasi/) · [Penafian](https://kaneberry.github.io/siap-pasang-guides/id/penafian/) · [Privasi](https://kaneberry.github.io/siap-pasang-guides/id/privasi/)
+
+[sitemap.xml](https://kaneberry.github.io/siap-pasang-guides/sitemap.xml)
+
+Pelan trafik tanpa kos: [TRAFFIC.md](TRAFFIC.md).
